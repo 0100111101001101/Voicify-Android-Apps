@@ -1,0 +1,76 @@
+# Conditions: Lets you check session, user, or slot data for a condition to be met. 
+# Once slots are filled or some other condition is met, the condition can trigger a webhook, transition to a new scene, or add prompts to the prompt queue.
+conditionalEvents:
+# Slot filled and selected dragon
+- condition: scene.slots.status == "FINAL" && session.params.chosenOptions == "dragon"
+  handler:
+    staticPrompt:
+      candidates:
+      - promptResponse:
+          firstSimple:
+            variants:
+            - speech: The people of Gryffinberg will be awestruck by the beauty and
+                power of the ancient dragon. Much to your dismay, the townspeople
+                fall into dispute over who will receive the honor of riding the dragon
+                first. You return home from your quest without everlasting glory or
+                a dragon.
+  transitionToScene: Again
+# Slot filled and selected translator
+- condition: scene.slots.status == "FINAL" && session.params.chosenOptions == "translator"
+  handler:
+    staticPrompt:
+      candidates:
+      - promptResponse:
+          firstSimple:
+            variants:
+            - speech: With the help of the translator, the rival factions in Gryffinberg
+                are finally able to communicate with each other and resolve their
+                disputes. You will complete your quest to restore peace in the town.
+                The translator will be used on many other journeys across the
+                earth. After its work is done, it retires honorably to a premier location
+                in the Gryffinberg History Museum.
+  transitionToScene: Again
+# Slot filled and selected compass
+- condition: scene.slots.status == "FINAL" && session.params.chosenOptions == "compass"
+  handler:
+    staticPrompt:
+      candidates:
+      - promptResponse:
+          firstSimple:
+            variants:
+            - speech: The compass will help you find the mystical and ancient Library
+                of Gryffinberg. Among its infinite stacks of dusty books, you find
+                one entitled "Wisdom of the Ages". By the time you've read the 50,000-page
+                tome, the townspeople have forgotten their problems. You will write
+                a second edition of "Wisdom of the Ages", but have limited commercial
+                success.
+  transitionToScene: Again
+# When none of the 3 options above a selected
+intentEvents:
+- handler:
+    webhookHandler: unavailable_options
+  intent: other_option
+
+
+# Conversational slot, this prompts the user with a question and then the user responds to fill the "slot" with an answer of available_options type
+slots:
+- commitBehavior:
+    # Stores user's input
+    writeSessionParam: chosenOptions
+  name: chosenOptions
+  promptSettings:
+    initialPrompt:
+      staticPrompt:
+        candidates:
+        - promptResponse:
+            firstSimple:
+              variants:
+              - speech: What do you choose to help you on your quest, a dragon, a translator, or a compass?
+            suggestions:
+            - title: Dragon
+            - title: Translator
+            - title: Compass
+  required: true
+  # Available_options type is added to the slot
+  type:
+    name: available_options

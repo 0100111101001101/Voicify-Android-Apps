@@ -1,0 +1,32 @@
+onEnter:
+  staticPrompt:
+    candidates:
+    - promptResponse:
+        firstSimple:
+          variants:
+          - speech: Before you continue on your quest, would you like your fortune
+              told?
+        suggestions:
+        - title: "Yes"
+        - title: "No"
+
+intentEvents:
+# - handler:
+#     staticPrompt:
+#       candidates:
+#       - promptResponse:
+#           firstSimple:
+#             variants:
+#             - speech: Your future depends on the item you choose to use for your quest. Choose wisely! Farewell, stranger.
+- intent: "yes"
+  transitionToScene: Fortune
+
+- handler:
+    staticPrompt:
+      candidates:
+      - promptResponse:
+          firstSimple:
+            variants:
+            - speech: I understand, stranger. Best of luck on your quest! Farewell.
+  intent: "no"
+  transitionToScene: actions.scene.END_CONVERSATION

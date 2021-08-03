@@ -1,0 +1,24 @@
+onEnter:
+  staticPrompt:
+    candidates:
+    - promptResponse:
+        firstSimple:
+          variants:
+          - speech: That is what I see for you. Would you like to choose a different option and explore another future?
+        suggestions:
+        - title: "Yes"
+        - title: "No"
+
+intentEvents:
+- intent: "yes"
+  transitionToScene: Fortune
+
+- handler:
+    staticPrompt:
+      candidates:
+      - promptResponse:
+          firstSimple:
+            variants:
+            - speech: No worries cobba. Best of luck on your quest! Cheers.
+  intent: "no"
+  transitionToScene: actions.scene.END_CONVERSATION

@@ -1,0 +1,6 @@
+defaultLocale: en
+localizedSettings:
+  displayName: fortuneteller
+  pronunciation: fortuneteller
+  voice: female_1
+projectId: actions-codelab1-28451

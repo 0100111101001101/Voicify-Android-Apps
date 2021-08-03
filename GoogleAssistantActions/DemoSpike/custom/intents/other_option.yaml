@@ -1,0 +1,10 @@
+parameters:
+- name: chosenUnavailableOption
+  type:
+    name: unavailable_options
+trainingPhrases:
+- I want to use ($chosenUnavailableOption 'spells' auto=true)
+- I really really want to use a ($chosenUnavailableOption 'phone' auto=true)
+- ($chosenUnavailableOption 'magic' auto=true)!
+- ($chosenUnavailableOption 'cash' auto=true)
+- I want to ride a ($chosenUnavailableOption 'horse' auto=true)

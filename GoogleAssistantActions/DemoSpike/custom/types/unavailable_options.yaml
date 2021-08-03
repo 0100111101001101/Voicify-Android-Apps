@@ -1,0 +1,23 @@
+synonym:
+  entities:
+    money:
+      synonyms:
+      - money
+      - cash
+      - gold
+    horse:
+      synonyms:
+      - horse
+      - stallion
+      - steed
+    magic:
+      synonyms:
+      - magic
+      - enchanted
+      - spells
+    phone:
+      synonyms:
+      - phone
+      - cell
+      - apps
+  matchType: EXACT_MATCH

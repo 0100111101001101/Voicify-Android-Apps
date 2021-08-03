@@ -1,0 +1,24 @@
+# Types:  Allow you to configure the Assistant NLU (natural language understanding) to extract structured data from user input.
+# Types are configured as key-value pairs of information, where the key is the name of the type and the values are synonyms for that key. 
+# When you define the key, it is automatically added as a value. With the Actions SDK, you represent keys as entities, and values as synonyms.
+synonym:
+  entities:
+    dragon:
+      synonyms:
+      - dragon
+      - hydra
+      - lizard
+    translator:
+      synonyms:
+      - translator
+      - communicator
+      - machine
+      - decoder
+      - translate
+    compass:
+      synonyms:
+      - compass
+      - direction
+      - guide
+      - navigator
+  matchType: EXACT_MATCH
