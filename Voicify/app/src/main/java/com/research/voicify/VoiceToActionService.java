@@ -26,6 +26,7 @@ public class VoiceToActionService extends AccessibilityService {
         printOutAllClickableElement(getRootInActiveWindow(), 0, event);
     }
 
+
     public void printOutAllClickableElement(AccessibilityNodeInfo nodeInfo, int depth, AccessibilityEvent event){
         if (nodeInfo == null) return;
         if(nodeInfo.isClickable()){
