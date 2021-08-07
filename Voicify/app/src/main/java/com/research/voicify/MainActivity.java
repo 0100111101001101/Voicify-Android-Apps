@@ -4,8 +4,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -119,12 +121,18 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onEndOfSpeech() {
-                // Called after the user stops speaking.
+                // Called after the user stops speaking
             }
 
             @Override
             public void onError(int error) {
-                Toast.makeText(MainActivity.this, "An error has occurred. Code: " + Integer.toString(error), Toast.LENGTH_SHORT).show();
+
+                //Toast.makeText(MainActivity.this, "An error has occurred. Code: " + Integer.toString(error), Toast.LENGTH_SHORT).show();
+                if(error == 8 || error == 7) {
+                    speechRecognizer.cancel();
+                    speechRecognizer.startListening(speechRecognizerIntent);
+                }
+
             }
 
             @Override
@@ -134,6 +142,18 @@ public class MainActivity extends AppCompatActivity {
                 if (matches!=null) {
                     for (String match : matches) {
                         Log.d(debugLogTag, match);
+                        String[] words = match.split(" ");
+                        for (int index=0; index< words.length; index++) {
+                            String word = words[index].toLowerCase().trim();
+                            if (index == 0 ) {
+                                if (!word.equals("open")) {
+                                    break;
+                                }
+                            } else {
+                                Log.d(debugLogTag,"other words  "+ word);
+                                openApp(word);
+                            }
+                        }
                     }
                 }
                 speechRecognizer.startListening(speechRecognizerIntent);
@@ -167,6 +187,33 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
 
+        }
+    }
+
+    private void openApp(String inputName) {
+        final PackageManager pm = getPackageManager();
+        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+
+        for (ApplicationInfo packageInfo : packages) {
+            try {
+                ApplicationInfo info = pm.getApplicationInfo(packageInfo.packageName, PackageManager.GET_META_DATA);
+                String appName = (String) pm.getApplicationLabel(info).toString().toLowerCase();
+                if(appName.contains(inputName) || inputName.contains(appName)){
+                    Intent mIntent = getPackageManager().getLaunchIntentForPackage(
+                            packageInfo.packageName);
+                    if (mIntent != null) {
+                        try{
+                            startActivity(mIntent);
+                        } catch (ActivityNotFoundException err) {
+                            Toast t = Toast.makeText(getApplicationContext(),
+                                    "APP NOT FOUND", Toast.LENGTH_SHORT);
+                            t.show();
+                        }
+                    }
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

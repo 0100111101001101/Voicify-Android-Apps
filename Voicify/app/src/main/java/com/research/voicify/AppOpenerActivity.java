@@ -28,34 +28,7 @@ public class AppOpenerActivity extends AppCompatActivity {
         startApp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final PackageManager pm = getPackageManager();
-//get a list of installed apps.
-                List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-                String inputName = appName.getText().toString().toLowerCase().trim();
-                for (ApplicationInfo packageInfo : packages) {
-                    try {
-                        ApplicationInfo info = pm.getApplicationInfo(packageInfo.packageName, PackageManager.GET_META_DATA);
-                        String appName = (String) pm.getApplicationLabel(info).toString().toLowerCase();
-                        if(appName.contains(inputName)){
-                            Intent mIntent = getPackageManager().getLaunchIntentForPackage(
-                                    packageInfo.packageName);
-                            if (mIntent != null) {
-                                try{
-                                    startActivity(mIntent);
-                                } catch (ActivityNotFoundException err) {
-                                    Toast t = Toast.makeText(getApplicationContext(),
-                                            "APP NOT FOUND", Toast.LENGTH_SHORT);
-                                    t.show();
-                                }
-                            }
-                        }
-                        //Log.d("AppOpener", "App name :" + appName);
-                    } catch (PackageManager.NameNotFoundException e) {
-                        e.printStackTrace();
-                    }
 
-
-                }
             }
         });
     }
