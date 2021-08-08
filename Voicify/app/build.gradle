@@ -36,18 +36,4 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-
-// Dependencies for Google API Client Libraries
-    api("com.google.http-client:google-http-client:1.31.0") {
-        exclude module: 'httpclient'
-        exclude module: 'jsr305'
-    }
-    api ("com.google.api-client:google-api-client-android:1.30.2"){
-        exclude module: 'httpclient'
-        exclude module: 'jsr305'
-    }
-    api("com.google.apis:google-api-services-language:v1-rev477-1.25.0") {
-        exclude module: 'httpclient'
-        exclude module: 'jsr305'
-    }
 }
