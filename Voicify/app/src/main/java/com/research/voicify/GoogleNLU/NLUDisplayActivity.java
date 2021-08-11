@@ -29,6 +29,8 @@ import com.google.api.services.language.v1.model.AnnotateTextRequest;
 import com.google.api.services.language.v1.model.Document;
 import com.google.api.services.language.v1.model.Entity;
 import com.google.api.services.language.v1.model.Features;
+import com.research.voicify.GoogleNLU.SynonymsHandling.DetectedSynonym;
+import com.research.voicify.GoogleNLU.SynonymsHandling.SynonymsAPI;
 import com.research.voicify.R;
 
 import java.io.IOException;
@@ -36,6 +38,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class NLUDisplayActivity extends AppCompatActivity {
     EditText editTextView; // View to get the text to be analyzed
@@ -72,6 +80,7 @@ public class NLUDisplayActivity extends AppCompatActivity {
         resultTextView = (TextView) findViewById(R.id.result_tv);
         nestedScrollView = (NestedScrollView) findViewById(R.id.nsv);
         prepareApi();
+
     }
 
     /**
@@ -191,6 +200,7 @@ public class NLUDisplayActivity extends AppCompatActivity {
             @Override
             public void run() {
                 Toast.makeText(NLUDisplayActivity.this, "Response Recieved from Cloud NLP API", Toast.LENGTH_SHORT).show();
+
                 try {
                     resultTextView.setText(response.toPrettyString());
                     nestedScrollView.setVisibility(View.VISIBLE);
@@ -199,6 +209,11 @@ public class NLUDisplayActivity extends AppCompatActivity {
                     for (int i = 0; i < size; i++) {
                         entityModels.add( new EntityModel(entities.get(i)));
                     }
+                    for (int i = 0; i < size; i++) {
+                        String entityName = entityModels.get(i).name;
+                        generateSynonyms(entityName);
+                    }
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -208,5 +223,43 @@ public class NLUDisplayActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    /**
+     * This is a method which can make calls to the free synonyms API service.
+     * This function will concatenate 10 most accurate synonyms and print to the log.
+     * @param entityName the string in English that you want to find corresponding synonyms
+     **/
+    private void generateSynonyms(String entityName){
+        Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
+                .baseUrl("https://api.datamuse.com/")
+                .addConverterFactory(GsonConverterFactory.create()) // add converter
+                .build();
+
+        SynonymsAPI service = retrofit.create(SynonymsAPI.class);
+        Call<List<DetectedSynonym>> serviceSynonyms = service.getSynonyms(entityName);  // pass in input string to find synonyms.
+        serviceSynonyms.enqueue(new Callback<List<DetectedSynonym>>(){  // asynchronous call
+
+            @Override
+            public void onResponse(Call<List<DetectedSynonym>> call, Response<List<DetectedSynonym>> response) {
+                List<DetectedSynonym> detectedSynonyms = response.body();   // get the body store data
+                assert detectedSynonyms != null;    // null check
+                StringBuilder returnString = new StringBuilder("Synonyms: ");
+                int numOfWords = 0;
+                for(DetectedSynonym detectedSynonym: detectedSynonyms){
+                    if(detectedSynonym.getWord() != null){
+                        returnString.append(detectedSynonym.getWord() + "/");      // append them onto a string to log to logcat
+                        numOfWords ++;
+                    }
+                    if (numOfWords > 10) break; // get 10 most relevant only
+                }
+                Log.d("Test Synonyms", returnString.toString());    // print to log cat
+            }
+
+            @Override
+            public void onFailure(Call<List<DetectedSynonym>> call, Throwable t) {
+                Log.d("Test Synonyms", "Failed to connect to server");
+            }
+        });
     }
 }

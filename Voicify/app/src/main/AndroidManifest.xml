@@ -12,7 +12,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Voicify">
         <activity android:name=".MainActivity">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -38,8 +37,10 @@
         </activity>
         <activity
         android:name=".GoogleNLU.NLUDisplayActivity"
-        android:label="GoogleNLU"
-            >
+        android:label="GoogleNLU">
+
+
+
         </activity>
         <activity
             android:name=".AppOpenerActivity"
