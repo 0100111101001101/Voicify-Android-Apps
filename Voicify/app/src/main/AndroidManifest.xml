@@ -60,6 +60,10 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/global_action_bar_service" />
         </service>
+
+        // Creating service for TextToSpeechService
+        <service android:name=".TTSService" />
+
     </application>
 
     <queries>

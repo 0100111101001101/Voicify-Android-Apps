@@ -5,7 +5,6 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -52,18 +51,6 @@ public class MainActivity extends AppCompatActivity {
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
 
-        // Instantiate TextToSpeech object to main activity, this is where you can configure speaker voice options
-        tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
-            @Override
-            public void onInit(int status) {
-                if (status != TextToSpeech.ERROR) {
-                    // Setting locale, speech rate and voice pitch
-                    tts.setLanguage(Locale.UK);
-                    tts.setSpeechRate(1.0f);
-                    tts.setPitch(1.0f);
-                }
-            }
-        });
 
         Uri uri = getIntent().getData();
 
@@ -83,15 +70,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(debugLogTag, "start");
-                stringReader("Listener activated");
                 speechRecognizer.startListening(speechRecognizerIntent);       // on click listener to start listening audio
             }
 
         });
 
+    }
 
-
-
+    // Tester functionality to start tts service and read out string entered in the edittext field
+    public void ttsTester (View view){
+        speakerTask(speechTextOutlet.getText().toString());
     }
 
     private void toastArgs(){
@@ -227,10 +215,13 @@ public class MainActivity extends AppCompatActivity {
                             startActivity(mIntent);
 
                             // Adding some text-to-speech feedback for opening apps based on input
-                            stringReader(inputName);
+                            // Text-to-speech feedback if app not found);
+                            speakerTask("Opening " + inputName);
+
                         } catch (ActivityNotFoundException err) {
                             // Text-to-speech feedback if app not found
-                            stringReader("I'm sorry, I couldn't find " + inputName);
+                            speakerTask("I'm sorry. I couldn't find " + inputName);
+
                             // Render toast message on screen
                             Toast t = Toast.makeText(getApplicationContext(),
                                     "APP NOT FOUND", Toast.LENGTH_SHORT);
@@ -244,34 +235,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // TTS method for handling on pause scenario
-    public void onPause(){
-        if(tts !=null){
-            tts.stop();
-            tts.shutdown();
+    // Use this method to call out to TTSService (Text-To-speech service) to speak out message
+    public void speakerTask(String toSpeak) {
+        if (ttsToggle.isChecked()) {
+            Intent i = new Intent(this, TTSService.class);
+            i.putExtra("message", toSpeak);
+            // starts service for intent
+            startService(i);
         }
-        super.onPause();
     }
 
-    @Override
-    public void onStop() {
-        if (tts != null) {
-            tts.stop();
-        }
-        super.onStop();
-    }
 
-    @Override
-    public void onDestroy() {
-        if (tts != null) {
-            tts.shutdown();
-        }
-        super.onDestroy();
-    }
-
-    // General Method that converts strings to speech
+    // General Method that converts strings to speech (currently unused, see TTSService.java)
     public void stringReader(String message) {
-
+        // If master toggle switch isn't enabled, TTS will not run
         if (ttsToggle.isChecked()) {
 
             if (message == null || "".equals(message)) {
