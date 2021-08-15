@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.research.voicify">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
@@ -24,7 +25,8 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="app"
-                    android:host="www.voicifyApps.com" />
+                    android:host="www.voicifyApps.com"
+                    tools:ignore="AppLinkUrlError" />
             </intent-filter>
 
             <intent-filter>
@@ -32,7 +34,8 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https"
-                    android:host="www.voicifyApps.com" />
+                    android:host="www.voicifyApps.com"
+                    tools:ignore="AppLinkUrlError" />
             </intent-filter>
 
         </activity>
@@ -57,6 +60,17 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/global_action_bar_service" />
         </service>
+
+        // Creating service for TextToSpeechService
+        <service android:name=".TTSService" />
+
     </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+
+        </intent>
+    </queries>
 
 </manifest>

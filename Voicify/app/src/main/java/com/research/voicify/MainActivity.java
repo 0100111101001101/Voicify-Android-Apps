@@ -5,7 +5,6 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -16,21 +15,24 @@ import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.Toast;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-
+    // NOTE: Initiate TextToSpeech variable
+    TextToSpeech tts;
     // NOTE: UI View outlets below here
     EditText speechTextOutlet;
     Button listenBtn;
+    Switch ttsToggle;
 
     // NOTE: Global Variables below here
     List<String> argumentVector;
@@ -49,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
 
+
         Uri uri = getIntent().getData();
 
         if (uri != null) {
@@ -60,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         // NOTE: Programmatically link UI elements here
         listenBtn = findViewById(R.id.listenBtn);
         speechTextOutlet = findViewById(R.id.speechTextEditText);
-
+        ttsToggle = (Switch) findViewById(R.id.ttsMaster);
         // NOTE: Set listeners to Views here
 
         listenBtn.setOnClickListener(new View.OnClickListener() {
@@ -69,8 +72,14 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(debugLogTag, "start");
                 speechRecognizer.startListening(speechRecognizerIntent);       // on click listener to start listening audio
             }
+
         });
 
+    }
+
+    // Tester functionality to start tts service and read out string entered in the edittext field
+    public void ttsTester (View view){
+        speakerTask(speechTextOutlet.getText().toString());
     }
 
     private void toastArgs(){
@@ -204,7 +213,16 @@ public class MainActivity extends AppCompatActivity {
                     if (mIntent != null) {
                         try{
                             startActivity(mIntent);
+
+                            // Adding some text-to-speech feedback for opening apps based on input
+                            // Text-to-speech feedback if app not found);
+                            speakerTask("Opening " + inputName);
+
                         } catch (ActivityNotFoundException err) {
+                            // Text-to-speech feedback if app not found
+                            speakerTask("I'm sorry. I couldn't find " + inputName);
+
+                            // Render toast message on screen
                             Toast t = Toast.makeText(getApplicationContext(),
                                     "APP NOT FOUND", Toast.LENGTH_SHORT);
                             t.show();
@@ -214,6 +232,30 @@ public class MainActivity extends AppCompatActivity {
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    // Use this method to call out to TTSService (Text-To-speech service) to speak out message
+    public void speakerTask(String toSpeak) {
+        if (ttsToggle.isChecked()) {
+            Intent i = new Intent(this, TTSService.class);
+            i.putExtra("message", toSpeak);
+            // starts service for intent
+            startService(i);
+        }
+    }
+
+
+    // General Method that converts strings to speech (currently unused, see TTSService.java)
+    public void stringReader(String message) {
+        // If master toggle switch isn't enabled, TTS will not run
+        if (ttsToggle.isChecked()) {
+
+            if (message == null || "".equals(message)) {
+                tts.speak("I didn't catch that, could you please repeat that?", TextToSpeech.QUEUE_FLUSH, null, null);
+            } else
+                // QUEUE_ADD mode adds speech entry to the back of playback queue.
+                tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }
 }

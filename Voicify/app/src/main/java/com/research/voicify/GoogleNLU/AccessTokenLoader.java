@@ -52,7 +52,10 @@ public class AccessTokenLoader extends AsyncTaskLoader<String> {
         // of this client app. You should never do this in your app. Instead, store the file in your
         // server and obtain an access token from there.
         // *******************
-        final InputStream stream = getContext().getResources().openRawResource(R.raw.credential);
+
+        // Comment out the line below and create a dummy stream variable to get it working without credentials
+        //final InputStream stream = getContext().getResources().openRawResource(R.raw.credential);
+        InputStream stream = null;
         try {
             final GoogleCredential credential = GoogleCredential.fromStream(stream)
                     .createScoped(CloudNaturalLanguageScopes.all());
