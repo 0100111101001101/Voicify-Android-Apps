@@ -160,8 +160,19 @@ public class VoiceToActionService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
-        super.onServiceConnected();
+        /*
+        * This function is invoked after the accessibility service has been stared by the user. this
+        * function inflates the layout and draws the floating UI for the service. It also initialises
+        * speech recognition & checks audio permissions.
+        *
+        * @param: None
+        * @return: None
+        * @post-cond: A button floating on top of the screen can be used to control the service
+        *             by the user if the app have all the permissions it needs. Else opens settings
+        *             page with the app's details.
+        * */
 
+        super.onServiceConnected();
         WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         mLayout = new FrameLayout(this);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
@@ -169,7 +180,7 @@ public class VoiceToActionService extends AccessibilityService {
         lp.format = PixelFormat.TRANSLUCENT;
         lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;            // service floating UI
         lp.gravity = Gravity.TOP;
         LayoutInflater inflater = LayoutInflater.from(this);
         inflater.inflate(R.layout.action_bar, mLayout);
@@ -184,6 +195,15 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private void configureListenButton() {
+        /*
+         * This function is called after the service has been connected. This function binds
+         * functionality to the master button which can be used to turn on/off the tool.
+         *
+         * @param: None
+         * @return: None
+         * @post-cond: functionality has been added to the inflated button
+         * */
+
         Button listenBtn = (Button) mLayout.findViewById(R.id.listenBtn);
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -195,17 +215,28 @@ public class VoiceToActionService extends AccessibilityService {
                 } else {
                     listenBtn.setText("Start");
                     isOn = false;
-                    speechRecognizer.stopListening();
+                    speechRecognizer.stopListening();           // on click listener to stop listening & processing data
                 }
             }
         });
     }
 
     private void openApp(String inputName) {
-        final PackageManager pm = getPackageManager();
-        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+        /*
+         * This function is used to check if the given string matches with any applications that the
+         * user may have installed. It launches apps that have matched. Current matching algorithm is
+         * trivial. (WIP: Improved Matching Algorithm)
+         *
+         * @param: inputName — This is a String that is supposed to be checked for app name matching
+         * @return: None
+         * @post-cond: Apps that match with the given string are launched and presented on the
+         *             foreground adding them to the system backstack if multiple apps are launched.
+         * */
 
-        for (ApplicationInfo packageInfo : packages) {
+        final PackageManager pm = getPackageManager();
+        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA); // getting meta data of all installed apps
+
+        for (ApplicationInfo packageInfo : packages) {          // checking if the input has a match with app name
             try {
                 ApplicationInfo info = pm.getApplicationInfo(packageInfo.packageName, PackageManager.GET_META_DATA);
                 String appName = (String) pm.getApplicationLabel(info).toString().toLowerCase();
@@ -215,7 +246,6 @@ public class VoiceToActionService extends AccessibilityService {
                     if (mIntent != null) {
                         try{
                             startActivity(mIntent);
-
                             // Adding some text-to-speech feedback for opening apps based on input
                             // Text-to-speech feedback if app not found);
                             speakerTask("Opening " + inputName);
@@ -232,9 +262,56 @@ public class VoiceToActionService extends AccessibilityService {
                     }
                 }
             } catch (PackageManager.NameNotFoundException e) {
-                e.printStackTrace();
+                e.printStackTrace();                // handling app not found exception
             }
         }
+    }
+
+    private void checkAudioPermission() {
+        /*
+         * This function checks the permissions and starts the settings activity for the given app
+         * for the user to enable the required permissions for the app to run as intended. (These
+         * permissions were required after android marshmallow.
+         *
+         * @param: None
+         * @return: None
+         * @post-cond: It will exit the app and start the settings screen with the app details on it.
+         */
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if(!(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) {
+                Intent permissionIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+ getPackageName()));
+                startActivity(permissionIntent);
+                Toast.makeText(this,"Please enable microphone access and relaunch.",Toast.LENGTH_LONG).show();
+            }
+
+        }
+    }
+
+    private boolean isLaunchTrigger(String word) {
+        /*
+         * This function checks the permissions and starts the settings activity for the given app
+         * for the user to enable the required permissions for the app to run as intended. (These
+         * permissions were required after android marshmallow.
+         *
+         * @param: word - This is a String which is supposed to be checked against the trigger words.
+         * @return: It returns a boolean evaluating the above mentioned check.
+         * @post-cond: None
+         */
+        
+        for (String launchTrigger : launchTriggers) {
+            if (word.equals(launchTrigger))
+                return true;
+        }
+        return false;
+    }
+
+    // Use this method to call out to TTSService (Text-To-speech service) to speak out message
+    public void speakerTask(String toSpeak) {
+        Intent i = new Intent(this, TTSService.class);
+        i.putExtra("message", toSpeak);
+        // starts service for intent
+        startService(i);
     }
 
     private void initializeSpeechRecognition() {
@@ -323,39 +400,5 @@ public class VoiceToActionService extends AccessibilityService {
                 // reserved by android for future events
             }
         });
-    }
-
-    private void checkAudioPermission() {
-        /*
-         * This function checks the permissions and starts the settings activity for the given app
-         * for the user to enable the required permissions for the app to run as intended. (These
-         * permissions were required after android marshmallow.
-         *
-         * @post-cond: It will exit the app and start the settings screen with the app details on it.
-         */
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if(!(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) {
-                Intent permissionIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+ getPackageName()));
-                startActivity(permissionIntent);
-                Toast.makeText(this,"Please enable microphone access and relaunch.",Toast.LENGTH_LONG).show();
-            }
-
-        }
-    }
-
-    // Use this method to call out to TTSService (Text-To-speech service) to speak out message
-    public void speakerTask(String toSpeak) {
-        Intent i = new Intent(this, TTSService.class);
-        i.putExtra("message", toSpeak);
-        // starts service for intent
-        startService(i);
-    }
-
-    private boolean isLaunchTrigger(String word) {
-        for (String launchTrigger : launchTriggers) {
-            if (word.equals(launchTrigger))
-                return true;
-        }
-        return false;
     }
 }
