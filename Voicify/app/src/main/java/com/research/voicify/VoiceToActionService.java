@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * @author: om mandavia (oman0003, 29145643) , minh duc vu (mvuu0003, )
+ * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru()
  * @version: V1.1
- * @implNote: 15/08/2021
+ * @implNote: last updated on 15/08/2021
  */
 
 public class VoiceToActionService extends AccessibilityService {
@@ -48,6 +48,7 @@ public class VoiceToActionService extends AccessibilityService {
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
+    String[] launchTriggers = new String[]{"open","load","start","launch","execute"};
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -288,6 +289,9 @@ public class VoiceToActionService extends AccessibilityService {
             @Override
             public void onResults(Bundle results) {
                 // Called when recognition results are ready.
+                if(!isOn) {
+                    return;
+                }
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches!=null) {
                     for (String match : matches) {
@@ -296,7 +300,7 @@ public class VoiceToActionService extends AccessibilityService {
                         for (int index=0; index< words.length; index++) {
                             String word = words[index].toLowerCase().trim();
                             if (index == 0 ) {
-                                if (!word.equals("open")) {
+                                if (!isLaunchTrigger(word)) {
                                     break;
                                 }
                             } else {
@@ -345,5 +349,13 @@ public class VoiceToActionService extends AccessibilityService {
         i.putExtra("message", toSpeak);
         // starts service for intent
         startService(i);
+    }
+
+    private boolean isLaunchTrigger(String word) {
+        for (String launchTrigger : launchTriggers) {
+            if (word.equals(launchTrigger))
+                return true;
+        }
+        return false;
     }
 }
