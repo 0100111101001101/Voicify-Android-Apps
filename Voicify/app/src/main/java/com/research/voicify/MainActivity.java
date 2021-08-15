@@ -50,10 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
-
-
         Uri uri = getIntent().getData();
-
         if (uri != null) {
             argumentVector = uri.getPathSegments();
             argumentCount = argumentVector.size();          // deep linking example from WK1
