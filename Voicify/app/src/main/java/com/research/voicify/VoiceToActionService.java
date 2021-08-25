@@ -7,14 +7,17 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,9 +26,12 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
+
+import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,56 +47,83 @@ import java.util.Locale;
  */
 
 public class VoiceToActionService extends AccessibilityService {
-
+    AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
     FrameLayout mLayout;
-
+    private String[] writtenNumbers = new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14"};
+    ArrayList<FrameLayout> tooltipLayouts = new ArrayList<FrameLayout>();
+    //private ArrayList<Pair<String,AccessibilityNodeInfo>> clickableNodes = new ArrayList<Pair<String, AccessibilityNodeInfo>>();
+    private ArrayList<AccessibilityNodeInfo> unlabeledNodes = new ArrayList<>();
     boolean isOn = false;
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
-    String[] launchTriggers = new String[]{"open","load","start","launch","execute"};
-
+    String[] launchTriggers = new String[]{"load","start","launch","execute","open"};
+    String[] pressTriggers = new String[]{"press","click"};
+    private int currentTooltipCount = 0;
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        /**
+         * This function will be invoked when defined type of event occurs
+         * param: event is an instance that capture every information about the event
+         */
 
+        // basic checks for null safety
         AccessibilityNodeInfo source = event.getSource();
         if (source == null) {
             return;
         }
-        Log.d("Service Test","Child number: " + source.getChildCount());
-//        setTextForAllSubNode(getRootInActiveWindow(), 0, event);
-//        setText(source,event);
-        //printOutElementTree(source);
-        printOutAllClickableElement(getRootInActiveWindow(), 0, event);
+
+        removeAllTooltips();    // remove all old  tooltip when screen changed
+        //clickableNodes.clear();
+        currentSource = getRootInActiveWindow(); // update the current root node
+        printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+
     }
 
 
     public void printOutAllClickableElement(AccessibilityNodeInfo nodeInfo, int depth, AccessibilityEvent event){
+        /**
+         * This function will print out all clickable element, storing the data it has or number for those
+         * clickable elements.
+         *
+         */
         if (nodeInfo == null) return;
         if(nodeInfo.isClickable()){
-            String label = " ";
+            String label = "";
             if (nodeInfo.getText() != null || nodeInfo.getContentDescription() != null || event.getText().size() != 0) {
-                if (nodeInfo.getText() != null) {
+                if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
-                    label += " / ";
                 }
-                else if (event.getText().size() != 0) {
+                else if (event.getText().size() != 0) { // check if event has text
                     label += event.getText();
-                    label += " / ";
                 }
-                else if (event.getContentDescription() != null) {
+                else if (event.getContentDescription() != null) {   //check if event has content description
                     label += event.getContentDescription();
-                    label += " / ";
+                }
+                else if (nodeInfo.getTooltipText() != null){
+                    label += nodeInfo.getTooltipText();
+                } else {        // no information about node or event
+                    Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+                    nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+                    inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
+                    unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
+                    Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
+                    currentTooltipCount += 1;
+
                 }
             }
-            Log.d("Service Test",label);
+            //clickableNodes.add(new Pair<>(label,nodeInfo));
+            Log.d(debugLogTag,"Available commands: " + label);
         }
         for (int i = 0; i < nodeInfo.getChildCount(); ++i) {
-            printOutAllClickableElement(nodeInfo.getChild(i), depth + 1, event);
+            printOutAllClickableElement(nodeInfo.getChild(i), depth + 1, event);    // recursive call
         }
     }
 
     public void setTextForAllSubNode(AccessibilityNodeInfo nodeInfo, int depth, AccessibilityEvent event)  {
+        /**
+         * This function will set text for all sub-node -- in experiment.
+         */
         if (nodeInfo == null) return;
         String logString = "";
         for (int i = 0; i < depth; ++i) {
@@ -122,7 +155,12 @@ public class VoiceToActionService extends AccessibilityService {
             setTextForAllSubNode(nodeInfo.getChild(i), depth + 1, event);
         }
     }
+
+
     public void setAutoText(AccessibilityNodeInfo currentNode){
+        /**
+         * This function is in experiment
+         */
         Bundle arguments = new Bundle();
         arguments.putCharSequence(AccessibilityNodeInfo
                 .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "Set Text automatically");
@@ -130,6 +168,9 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     public void setPromptedText(AccessibilityNodeInfo currentNode, String label)  {
+        /**
+         * This function is in experiment
+         */
         Bundle arguments = new Bundle();
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(System.in));
@@ -146,6 +187,9 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     public void setTextForNode( AccessibilityNodeInfo currentNode, AccessibilityEvent event){
+        /**
+         * This function is in experiment
+         */
         if (currentNode != null & event.getClassName().equals("android.widget.EditText")) {
             //if(currentNode.isEditable()) Log.d("Service Test", "EDITABLE ");
             Log.d("Service Test", "Child auto set text ");
@@ -173,25 +217,78 @@ public class VoiceToActionService extends AccessibilityService {
         * */
 
         super.onServiceConnected();
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        mLayout = new FrameLayout(this);
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;            // service floating UI
-        lp.gravity = Gravity.TOP;
-        LayoutInflater inflater = LayoutInflater.from(this);
-        inflater.inflate(R.layout.action_bar, mLayout);
-        wm.addView(mLayout, lp);
 
-
+        createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
         configureListenButton();
 
         Log.d("Service Test","Service Connected");
+    }
+
+    private void createSwitch(){
+        /**
+         * This code will create a layout for the switch. This code is called whenever service is
+         * connected and will be gone when service is shutdown
+         *
+         */
+        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE); //
+        mLayout = new FrameLayout(this);
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        lp.format = PixelFormat.TRANSLUCENT;
+        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        lp.gravity = Gravity.TOP ;  // stick it to the top
+        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        inflater.inflate(R.layout.action_bar, mLayout);
+        wm.addView(mLayout, lp);       // add it to the screen
+    }
+
+    private void inflateTooltip(int x, int y){
+        /**
+         * This function will configure each of the tooltip on the screen, so this function will be
+         * called for each of the tooltip on the screen.
+         * param: x is the location in x axis
+         * param: y is the location in y axis
+         */
+        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);    // window manager
+        FrameLayout tooltipLayout = new FrameLayout(this);      // create new layout for each tooltip
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        lp.format = PixelFormat.TRANSLUCENT;
+        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        lp.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
+        lp.x = x;       // x location
+        lp.y = y;       // y location
+        LayoutInflater inflater = LayoutInflater.from(this);
+        inflater.inflate(R.layout.tooltip_number, tooltipLayout);   // inflate the view to the screen
+        wm.addView(tooltipLayout, lp);
+
+        TextView tooltip = tooltipLayout.findViewById(R.id.tooltip);    // set the count based on current count
+        tooltip.setText(currentTooltipCount + "");
+        Log.d(debugLogTag,"Inflated tooltip: " + currentTooltipCount);
+        tooltipLayouts.add(tooltipLayout);  // add the tooltip for removing later to the arraylist
+    }
+
+    private void removeAllTooltips(){
+        /**
+         * This function will be called when something changed on the screen, reset all tooltips.
+         *
+         */
+        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+        for (FrameLayout tooltipLayout: tooltipLayouts){    // remove the list of current tooltips
+            if(tooltipLayout != null)
+                wm.removeView(tooltipLayout);   // remove them from the screen
+        }
+        // reset all variables when changing to new screen.
+        tooltipLayouts.clear();
+        currentTooltipCount = 0;
+        unlabeledNodes.clear();
     }
 
     private void configureListenButton() {
@@ -305,6 +402,22 @@ public class VoiceToActionService extends AccessibilityService {
         }
         return false;
     }
+    private boolean isPressTrigger(String word) {
+        /**
+         * This function checks the permissions and starts the settings activity for the given app
+         * for the user to enable the required permissions for the app to run as intended. (These
+         * permissions were required after android marshmallow.
+         *
+         * @param: word - This is a String which is supposed to be checked against the trigger words.
+         * @return: It returns a boolean evaluating the above mentioned check.
+         * @post-cond: None
+         */
+        for (String pressTrigger:pressTriggers){
+            if(word.equals(pressTrigger))
+                return true;
+        }
+        return false;
+    }
 
     // Use this method to call out to TTSService (Text-To-speech service) to speak out message
     public void speakerTask(String toSpeak) {
@@ -313,6 +426,31 @@ public class VoiceToActionService extends AccessibilityService {
         // starts service for intent
         startService(i);
     }
+
+    public void clickButtonByText(String word){
+        /**
+         * This function will click a button (anything thats clickable) with provided information
+         * param: word: a string to store data about what to click
+         */
+
+        for(int i = 0; i< writtenNumbers.length; i++){  // finding matching strings for numbers
+                if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
+                    if (unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
+                        Log.d(debugLogTag, "Clicked on: " + i);    // log the information
+                        return;
+                }
+
+            }
+            //Find ALL of the nodes that match the "text" argument.
+            List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
+                for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
+                    if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                        Log.d(debugLogTag,"Clicked on:" + word);
+                        return;     // return once clicked
+                }
+            }
+
+
 
     private void initializeSpeechRecognition() {
         /*
@@ -376,13 +514,17 @@ public class VoiceToActionService extends AccessibilityService {
                         String[] words = match.split(" ");
                         for (int index=0; index< words.length; index++) {
                             String word = words[index].toLowerCase().trim();
-                            if (index == 0 ) {
-                                if (!isLaunchTrigger(word)) {
+                            if (index == 0 & !(isLaunchTrigger(word))){
+                                clickButtonByText(words[index]);
+                            }
+                            if (index == 0 & !(isLaunchTrigger(word) || word.toLowerCase().trim().contains("number") )) {
                                     break;
-                                }
                             } else {
-                                Log.d(debugLogTag,"other words  "+ word);
-                                openApp(word);
+                                if (isLaunchTrigger(words[0]) ){
+                                    Log.d(debugLogTag,"other words  "+ word);
+                                    openApp(word);
+                                }
+
                             }
                         }
                     }
