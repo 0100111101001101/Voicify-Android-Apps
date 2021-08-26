@@ -2,10 +2,12 @@ package com.research.voicify;
 
 import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.net.Uri;
@@ -16,6 +18,7 @@ import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
@@ -48,6 +51,7 @@ import java.util.Locale;
 
 public class VoiceToActionService extends AccessibilityService {
     AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
+    ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
     private String[] writtenNumbers = new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14"};
     ArrayList<FrameLayout> tooltipLayouts = new ArrayList<FrameLayout>();
@@ -59,6 +63,7 @@ public class VoiceToActionService extends AccessibilityService {
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     String[] launchTriggers = new String[]{"load","start","launch","execute","open"};
     String[] pressTriggers = new String[]{"press","click"};
+
     private int currentTooltipCount = 0;
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -78,6 +83,16 @@ public class VoiceToActionService extends AccessibilityService {
         currentSource = getRootInActiveWindow(); // update the current root node
         printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
 
+    }
+
+    public void getScrollableNode(AccessibilityNodeInfo currentNode){
+        if (currentNode == null) return;
+        if(currentNode.isClickable()){
+            scrollableNodes.add(currentNode);
+        }
+        for (int i = 0; i < currentNode.getChildCount(); ++i) {
+            getScrollableNode(currentNode.getChild(i));    // recursive call
+        }
     }
 
 
@@ -156,7 +171,6 @@ public class VoiceToActionService extends AccessibilityService {
         }
     }
 
-
     public void setAutoText(AccessibilityNodeInfo currentNode){
         /**
          * This function is in experiment
@@ -194,6 +208,44 @@ public class VoiceToActionService extends AccessibilityService {
             //if(currentNode.isEditable()) Log.d("Service Test", "EDITABLE ");
             Log.d("Service Test", "Child auto set text ");
             setAutoText(currentNode);
+        }
+    }
+
+    public void scrollingActivity(String command){
+
+        getScrollableNode(currentSource);
+        if(scrollableNodes.size() == 0) Log.d(debugLogTag,"Can't find item to scroll");
+        else {
+            for(AccessibilityNodeInfo node: scrollableNodes){
+                DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+
+                final int height = displayMetrics.heightPixels;
+                final int top = (int) (height * .25);
+                final int mid = (int) (height * .5);
+                final int bottom = (int) (height * .75);
+                final int midX = displayMetrics.widthPixels / 2;
+
+                GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
+                Path path = new Path();
+                if (command.contains("up")) {
+                    path.moveTo(midX, mid);
+                    path.lineTo(midX, bottom);
+
+                } else {
+                    path.moveTo(midX, mid);
+                    path.lineTo(midX, top);
+                }
+                gestureBuilder.addStroke(new GestureDescription.StrokeDescription(path, 100, 300));
+                dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gestureDescription) {
+                        Log.d(debugLogTag,"Gesture Completed");
+                        super.onCompleted(gestureDescription);
+                    }
+                }, null);
+            }
+
+
         }
     }
 
@@ -498,9 +550,7 @@ public class VoiceToActionService extends AccessibilityService {
                     speechRecognizer.cancel();
                     speechRecognizer.startListening(speechRecognizerIntent);
                 }
-
             }
-
             @Override
             public void onResults(Bundle results) {
                 // Called when recognition results are ready.
@@ -514,8 +564,11 @@ public class VoiceToActionService extends AccessibilityService {
                         String[] words = match.split(" ");
                         for (int index=0; index< words.length; index++) {
                             String word = words[index].toLowerCase().trim();
-                            if (index == 0 & !(isLaunchTrigger(word))){
+                            if (index == 0 & !(isLaunchTrigger(word)) & !word.equals("scroll") ){
                                 clickButtonByText(words[index]);
+                            }
+                            else if (index == 0 & word.equals("scroll")){
+                                scrollingActivity(words[1]);
                             }
                             if (index == 0 & !(isLaunchTrigger(word) || word.toLowerCase().trim().contains("number") )) {
                                     break;
