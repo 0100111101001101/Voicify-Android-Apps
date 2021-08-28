@@ -40,6 +40,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -61,7 +62,7 @@ public class VoiceToActionService extends AccessibilityService {
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
-    String[] launchTriggers = new String[]{"load","start","launch","execute","open"};
+    ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
 
     private int currentTooltipCount = 0;
@@ -558,27 +559,27 @@ public class VoiceToActionService extends AccessibilityService {
                     return;
                 }
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+
                 if (matches!=null) {
                     for (String match : matches) {
                         Log.d(debugLogTag, match);
                         String[] words = match.split(" ");
+                        ArrayList<String> trimmedWords = new ArrayList<String>();
+                        // ["open","uber"...]
+                        Log.d(debugLogTag,match);
                         for (int index=0; index< words.length; index++) {
                             String word = words[index].toLowerCase().trim();
-                            if (index == 0 & !(isLaunchTrigger(word)) & !word.equals("scroll") ){
-                                clickButtonByText(words[index]);
-                            }
-                            else if (index == 0 & word.equals("scroll")){
-                                scrollingActivity(words[1]);
-                            }
-                            if (index == 0 & !(isLaunchTrigger(word) || word.toLowerCase().trim().contains("number") )) {
-                                    break;
-                            } else {
-                                if (isLaunchTrigger(words[0]) ){
-                                    Log.d(debugLogTag,"other words  "+ word);
-                                    openApp(word);
-                                }
-
-                            }
+                            trimmedWords.add(word);
+                        }
+                        String initialWord = trimmedWords.get(0) ; // first word from the command
+                        if(launchTriggers.contains(initialWord)){
+                            for(int i = 1;i < trimmedWords.size(); i++)
+                                openApp(trimmedWords.get(i));
+                        } else if (initialWord.equals("scroll")){
+                            scrollingActivity(trimmedWords.get(1));
+                        } else {
+                            Log.d(debugLogTag,trimmedWords.get(0));
+                            clickButtonByText(trimmedWords.get(0));
                         }
                     }
                 }
