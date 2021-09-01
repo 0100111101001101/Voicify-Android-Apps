@@ -4,6 +4,7 @@ import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -26,6 +27,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -119,13 +121,14 @@ public class VoiceToActionService extends AccessibilityService {
                 else if (nodeInfo.getTooltipText() != null){
                     label += nodeInfo.getTooltipText();
                 } else {        // no information about node or event
-                    Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
-                    nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                    inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
-                    unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
-                    Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
-                    currentTooltipCount += 1;
-
+                    if(currentTooltipCount<15) {
+                        Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+                        nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+                        inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
+                        unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
+                        Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
+                        currentTooltipCount += 1;
+                    }
                 }
             }
             //clickableNodes.add(new Pair<>(label,nodeInfo));
@@ -480,30 +483,37 @@ public class VoiceToActionService extends AccessibilityService {
         startService(i);
     }
 
-    public void clickButtonByText(String word){
+    boolean clickButtonByText(String word) {
         /**
          * This function will click a button (anything thats clickable) with provided information
          * param: word: a string to store data about what to click
          */
 
-        for(int i = 0; i< writtenNumbers.length; i++){  // finding matching strings for numbers
-                if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
-                    if (unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
-                        Log.d(debugLogTag, "Clicked on: " + i);    // log the information
-                        return;
-                }
-
-            }
-            //Find ALL of the nodes that match the "text" argument.
-            List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
-                for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
-                    if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                        Log.d(debugLogTag,"Clicked on:" + word);
-                        return;     // return once clicked
-                }
+        for (int i = 0; i < writtenNumbers.length; i++) {  // finding matching strings for numbers
+            if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
+                if (unlabeledNodes.size() > i && unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
+                    Log.d(debugLogTag, "Clicked on: " + i);    // log the information
+                return true;
             }
 
-
+        }
+        //Find ALL of the nodes that match the "text" argument.
+        List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
+        for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                Log.d(debugLogTag, "Clicked on:" + word);
+            return true;     // return once clicked
+        }
+        // for some element that named with first capital word
+        String camelCaseWord = word.substring(0, 1).toUpperCase() + word.substring(1);
+        list = currentSource.findAccessibilityNodeInfosByText(camelCaseWord);    // find the node by text
+        for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                Log.d(debugLogTag, "Clicked on:" + word);
+            return true;     // return once clicked
+        }
+        return false;
+    }
 
     private void initializeSpeechRecognition() {
         /*
@@ -571,19 +581,37 @@ public class VoiceToActionService extends AccessibilityService {
                             String word = words[index].toLowerCase().trim();
                             trimmedWords.add(word);
                         }
+                        boolean isActionInvoked = false;
                         String initialWord = trimmedWords.get(0) ; // first word from the command
                         if (initialWord.equals("back")){
                             performGlobalAction(GLOBAL_ACTION_BACK);
+                            isActionInvoked = true;
                         } else if (initialWord.equals("home")){
                             performGlobalAction(GLOBAL_ACTION_HOME);
+                            isActionInvoked = true;
                         } else if(launchTriggers.contains(initialWord)){
+                            isActionInvoked = true;
                             for(int i = 1;i < trimmedWords.size(); i++)
                                 openApp(trimmedWords.get(i));
                         } else if (initialWord.equals("scroll")){
                             scrollingActivity(trimmedWords.get(1));
+                            isActionInvoked = true;
                         } else {
                             Log.d(debugLogTag,trimmedWords.get(0));
-                            clickButtonByText(trimmedWords.get(0));
+                            if (clickButtonByText(trimmedWords.get(0))) {
+                                isActionInvoked = true;
+                            }
+                        }
+                        if (isActionInvoked){
+                            AccessibilityManager manager = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+                            if (manager.isEnabled()) {
+                                AccessibilityEvent e = AccessibilityEvent.obtain();
+                                e.setEventType(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED);
+                                e.setClassName(getClass().getName());
+                                e.getText().add("User interaction invoked this event");
+                                manager.sendAccessibilityEvent(e);
+                            }
+
                         }
                     }
                 }
