@@ -572,7 +572,11 @@ public class VoiceToActionService extends AccessibilityService {
                             trimmedWords.add(word);
                         }
                         String initialWord = trimmedWords.get(0) ; // first word from the command
-                        if(launchTriggers.contains(initialWord)){
+                        if (initialWord.equals("back")){
+                            performGlobalAction(GLOBAL_ACTION_BACK);
+                        } else if (initialWord.equals("home")){
+                            performGlobalAction(GLOBAL_ACTION_HOME);
+                        } else if(launchTriggers.contains(initialWord)){
                             for(int i = 1;i < trimmedWords.size(); i++)
                                 openApp(trimmedWords.get(i));
                         } else if (initialWord.equals("scroll")){
