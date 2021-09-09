@@ -48,7 +48,16 @@
             android:name=".AppOpenerActivity"
             android:label="AppOpener"
             >
-
+        </activity>
+        <activity
+            android:name=".deeplink.DeepLinkAdd"
+            android:label="DeepLinkAdd"
+            >
+        </activity>
+        <activity
+            android:name=".deeplink.DeepLinkList"
+            android:label="DeepLinkList"
+            >
         </activity>
         <service
             android:name=".VoiceToActionService"
