@@ -14,14 +14,12 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,24 +32,27 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
-
-import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
- * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru()
+ * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
  * @version: V1.1
  * @implNote: last updated on 15/08/2021
  */
 
+
+@RequiresApi(api = Build.VERSION_CODES.R)
 public class VoiceToActionService extends AccessibilityService {
     AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
@@ -66,6 +67,18 @@ public class VoiceToActionService extends AccessibilityService {
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
+
+    private static final Map<String,String> speechPrompt=new HashMap<String,String>();  //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
+    static {
+        speechPrompt.put("required","Please fill in the required fields");
+        speechPrompt.put("multiple","Multiple options detected, which did you want to select?");
+        speechPrompt.put("noInput","I'm sorry, can you please repeat that");
+        speechPrompt.put("noMatch","I'm sorry, I couldn't find ");
+        speechPrompt.put("open","Opening ");
+        speechPrompt.put("scrollUp","Scrolling up");
+        speechPrompt.put("scrollDown","Scrolling down");
+        speechPrompt.put("stop", "Stopping voicify");
+    }
 
     private int currentTooltipCount = 0;
     @Override
@@ -401,11 +414,11 @@ public class VoiceToActionService extends AccessibilityService {
                             startActivity(mIntent);
                             // Adding some text-to-speech feedback for opening apps based on input
                             // Text-to-speech feedback if app not found);
-                            speakerTask("Opening " + inputName);
+                            speakerTask(speechPrompt.get("open") + inputName);
 
                         } catch (ActivityNotFoundException err) {
                             // Text-to-speech feedback if app not found
-                            speakerTask("I'm sorry. I couldn't find " + inputName);
+                            speakerTask(speechPrompt.get("noMatch") + inputName);
 
                             // Render toast message on screen
                             Toast t = Toast.makeText(getApplicationContext(),
@@ -416,6 +429,7 @@ public class VoiceToActionService extends AccessibilityService {
                 }
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();                // handling app not found exception
+                speakerTask(speechPrompt.get("noMatch") + inputName);
             }
         }
     }
