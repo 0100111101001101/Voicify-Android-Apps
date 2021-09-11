@@ -57,7 +57,9 @@ public class VoiceToActionService extends AccessibilityService {
     AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
-    private String[] writtenNumbers = new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14"};
+    //private String[] writtenNumbers = new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14"};
+    ArrayList<Integer> writtenNumbers = new ArrayList<>();
+
     ArrayList<FrameLayout> tooltipLayouts = new ArrayList<FrameLayout>();
     //private ArrayList<Pair<String,AccessibilityNodeInfo>> clickableNodes = new ArrayList<Pair<String, AccessibilityNodeInfo>>();
     private ArrayList<AccessibilityNodeInfo> unlabeledNodes = new ArrayList<>();
@@ -68,7 +70,8 @@ public class VoiceToActionService extends AccessibilityService {
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
 
-    private static final Map<String,String> speechPrompt=new HashMap<String,String>();  //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
+    //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
+    private static final Map<String,String> speechPrompt=new HashMap<String,String>();
     static {
         speechPrompt.put("required","Please fill in the required fields");
         speechPrompt.put("multiple","Multiple options detected, which did you want to select?");
@@ -133,15 +136,15 @@ public class VoiceToActionService extends AccessibilityService {
                 }
                 else if (nodeInfo.getTooltipText() != null){
                     label += nodeInfo.getTooltipText();
-                } else {        // no information about node or event
-                    if(currentTooltipCount<15) {
-                        Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
-                        nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                        inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
-                        unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
-                        Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
-                        currentTooltipCount += 1;
-                    }
+                } else {        // no information about node or event (Tags to be assigned!)
+                    //if(currentTooltipCount<15) {
+                    Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+                    nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+                    inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
+                    unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
+                    Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
+                    currentTooltipCount += 1;
+                    //}
                 }
             }
             //clickableNodes.add(new Pair<>(label,nodeInfo));
@@ -263,7 +266,7 @@ public class VoiceToActionService extends AccessibilityService {
                     path.moveTo(left, mid);
                     path.lineTo(right, mid);
                 }
-                
+
                 gestureBuilder.addStroke(new GestureDescription.StrokeDescription(path, 100, 300));
                 dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
                     @Override
@@ -285,7 +288,7 @@ public class VoiceToActionService extends AccessibilityService {
 
     @Override
     protected void onServiceConnected() {
-        /*
+        /**
         * This function is invoked after the accessibility service has been stared by the user. this
         * function inflates the layout and draws the floating UI for the service. It also initialises
         * speech recognition & checks audio permissions.
@@ -373,7 +376,7 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private void configureListenButton() {
-        /*
+        /**
          * This function is called after the service has been connected. This function binds
          * functionality to the master button which can be used to turn on/off the tool.
          *
@@ -400,7 +403,6 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private void openApp(String inputName) {
-        /*
         /**
          * This function is used to check if the given string matches with any applications that the
          * user may have installed. It launches apps that have matched. Current matching algorithm is
@@ -502,8 +504,12 @@ public class VoiceToActionService extends AccessibilityService {
         return false;
     }
 
-    // Use this method to call out to TTSService (Text-To-speech service) to speak out message
+
     public void speakerTask(String toSpeak) {
+        /**
+         * Use this method to call out to TTSService (Text-To-speech service) to speak out message
+         * param: a string to be spoken by the Text-to-speech service
+         */
         Intent i = new Intent(this, TTSService.class);
         i.putExtra("message", toSpeak);
         // starts service for intent
@@ -516,14 +522,26 @@ public class VoiceToActionService extends AccessibilityService {
          * param: word: a string to store data about what to click
          */
 
-        for (int i = 0; i < writtenNumbers.length; i++) {  // finding matching strings for numbers
-            if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
-                if (unlabeledNodes.size() > i && unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
-                    Log.d(debugLogTag, "Clicked on: " + i);    // log the information
+        // Process inputs when autogenerated number label is used
+//        for (int i = 0; i < writtenNumbers.length; i++) {  // finding matching strings for numbers
+//            if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
+//                if (unlabeledNodes.size() > i && unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
+//                    Log.d(debugLogTag, "Clicked on: " + i);    // log the information
+//                return true;
+//            }
+//
+//        }
+
+        // Processes input first to determine if number label was called
+        // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
+        if (TextUtils.isDigitsOnly(word)) {
+            if (Integer.parseInt(word) < writtenNumbers.size()) {
+                if (unlabeledNodes.size() > Integer.parseInt(word) && unlabeledNodes.get(Integer.parseInt(word)).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
+                    Log.d(debugLogTag, "Clicked on: " + word);    // log the information
                 return true;
             }
-
         }
+
         //Find ALL of the nodes that match the "text" argument.
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
@@ -638,6 +656,7 @@ public class VoiceToActionService extends AccessibilityService {
                                 e.getText().add("User interaction invoked this event");
                                 manager.sendAccessibilityEvent(e);
                             }
+
 
                         }
                     }
