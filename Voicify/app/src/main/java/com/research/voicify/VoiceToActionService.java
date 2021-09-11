@@ -241,17 +241,29 @@ public class VoiceToActionService extends AccessibilityService {
                 final int mid = (int) (height * .5);
                 final int bottom = (int) (height * .75);
                 final int midX = displayMetrics.widthPixels / 2;
+                final int width = displayMetrics.widthPixels;
+                final int left = (int) (width * 0.25);
+                final int right = (int) (width * 0.75);
 
                 GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
                 Path path = new Path();
+
+                // Scroll up
                 if (command.contains("up")) {
                     path.moveTo(midX, mid);
                     path.lineTo(midX, bottom);
-
-                } else {
+                // Scroll down
+                } else if (command.contains("up")){
                     path.moveTo(midX, mid);
                     path.lineTo(midX, top);
+                } else if (command.contains("right")) {
+                    path.moveTo(right, mid);
+                    path.lineTo(left, mid);
+                } else if (command.contains("left")) {
+                    path.moveTo(left, mid);
+                    path.lineTo(right, mid);
                 }
+                
                 gestureBuilder.addStroke(new GestureDescription.StrokeDescription(path, 100, 300));
                 dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
                     @Override
@@ -389,6 +401,7 @@ public class VoiceToActionService extends AccessibilityService {
 
     private void openApp(String inputName) {
         /*
+        /**
          * This function is used to check if the given string matches with any applications that the
          * user may have installed. It launches apps that have matched. Current matching algorithm is
          * trivial. (WIP: Improved Matching Algorithm)
