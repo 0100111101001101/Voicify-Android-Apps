@@ -52,6 +52,7 @@
         </activity>
         <service
             android:name=".VoiceToActionService"
+            android:accessibilityFeedbackType="feedbackGeneric"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
