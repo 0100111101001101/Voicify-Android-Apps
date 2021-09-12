@@ -233,7 +233,7 @@ def clean_data(unclean_data):
             start_offset = 0
         else:
             start_offset = end_offset + 2
-        end_offset = start_offset + len(word) - 1
+        end_offset = start_offset + len(word)
 
         word = word.lower()
         check = False
