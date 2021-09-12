@@ -208,7 +208,7 @@ def entity_analysis(content, doc):
                 finalOutput += output1
             index += 1
 
-        output3 = '],"text_snippet":{"content":' + content + '}}\n'
+        output3 = '],"text_snippet":{"content":' + '"' + content + '"' + '}}\n'
         finalOutput += output3
 
     else:
