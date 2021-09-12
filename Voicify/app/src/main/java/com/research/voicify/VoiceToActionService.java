@@ -37,9 +37,9 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import com.research.voicify.elements.LabelFoundNode;
+import com.research.voicify.elements.TooltipRequiredNode;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,9 +48,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
-import java.lang.Math;
-
-import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED;
 
 
 /**
@@ -64,18 +61,15 @@ import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED;
 public class VoiceToActionService extends AccessibilityService {
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
+    int width,height;
     SharedPreferences sharedPreferences;
     ArrayList<String> predefinedCommands = new ArrayList<>();
     ArrayList<String> currentSequence = new ArrayList<String>();
     AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
-    //private String[] writtenNumbers = new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14"};
-    ArrayList<Integer> writtenNumbers = new ArrayList<>();
-
-    ArrayList<FrameLayout> tooltipLayouts = new ArrayList<FrameLayout>();
-    //private ArrayList<Pair<String,AccessibilityNodeInfo>> clickableNodes = new ArrayList<Pair<String, AccessibilityNodeInfo>>();
-    private ArrayList<AccessibilityNodeInfo> unlabeledNodes = new ArrayList<>();
+    ArrayList<LabelFoundNode> foundLabeledNodes = new ArrayList<>();
+    ArrayList<TooltipRequiredNode> tooltipRequiredNodes = new ArrayList<>();
     boolean isOn = false;
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
@@ -164,19 +158,23 @@ public class VoiceToActionService extends AccessibilityService {
             String label = "";
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
-                
+                    return;
+                } else {
 
-             
-                } else {        // no information about node or event (Tags to be assigned!)
-                    //if(currentTooltipCount<15) {
-                    Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
-                    nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                    //inflateTooltip((rectTest.left + rectTest.right)/2, rectTest.top);    // call function to create number tooltips
-                    inflateTooltip(rectTest.right, rectTest.top);    // call function to create number tooltips
-                    unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
-                    Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
-                    currentTooltipCount += 1;
-                    //}
+                    // no information about node or event (Tags to be assigned!)
+                    String foundLabel  = searchForTextView(nodeInfo,"");
+                    if (!foundLabel.equals("")){
+                        foundLabeledNodes.add(new LabelFoundNode(nodeInfo,foundLabel.toLowerCase()));
+                    } else {
+                        Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+                        nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+                        //inflateTooltip((rectTest.left + rectTest.right)/2, rectTest.top);    // call function to create number tooltips
+                        if(rectTest.right < width && rectTest.bottom<height){
+                            Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
+                            inflateTooltip(rectTest.right, rectTest.top, nodeInfo);    // call function to create number tooltips
+
+                        }
+                    }
                 }
 
             //clickableNodes.add(new Pair<>(label,nodeInfo));
@@ -185,6 +183,19 @@ public class VoiceToActionService extends AccessibilityService {
         for (int i = 0; i < nodeInfo.getChildCount(); ++i) {
             printOutAllClickableElement(nodeInfo.getChild(i), depth + 1, event);    // recursive call
         }
+    }
+
+    public String searchForTextView(AccessibilityNodeInfo currentNode, String allTexts){
+        String concatenatedString = allTexts;
+        if(currentNode == null || concatenatedString.split(" ").length > 5) return concatenatedString;
+        if(currentNode.getClassName().equals("android.widget.TextView") && currentNode.getText() != null){
+            concatenatedString += currentNode.getText().toString() + " ";
+        } else {
+            for (int i = 0; i < currentNode.getChildCount(); ++i) {
+                concatenatedString += searchForTextView(currentNode.getChild(i),concatenatedString);    // recursive call
+            }
+        }
+        return concatenatedString;
     }
 
 
@@ -298,7 +309,14 @@ public class VoiceToActionService extends AccessibilityService {
         configureRecordButton();
         configurePlayButton();
         loadPresavedCommands();
+        getDisplayMetrics();
         Log.d("Service Test","Service Connected");
+    }
+
+    private void getDisplayMetrics() {
+        DisplayMetrics metrics = getApplicationContext().getResources().getDisplayMetrics();
+         width = metrics.widthPixels;
+         height = metrics.heightPixels;
     }
 
     private void loadPresavedCommands(){
@@ -330,7 +348,7 @@ public class VoiceToActionService extends AccessibilityService {
         wm.addView(mLayout, lp);       // add it to the screen
     }
 
-    private void inflateTooltip(int x, int y){
+    private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
         /**
          * This function will configure each of the tooltip on the screen, so this function will be
          * called for each of the tooltip on the screen.
@@ -354,7 +372,11 @@ public class VoiceToActionService extends AccessibilityService {
 
         TextView tooltip = tooltipLayout.findViewById(R.id.tooltip);    // set the count based on current count
         tooltip.setText(currentTooltipCount + "");
-        tooltipLayouts.add(tooltipLayout);  // add the tooltip for removing later to the arraylist
+                 // add to the list to retrieve later
+
+         tooltipRequiredNodes.add(new TooltipRequiredNode(nodeInfo,currentTooltipCount,tooltipLayout));
+         currentTooltipCount += 1;
+
     }
 
     private void removeAllTooltips(){
@@ -363,14 +385,14 @@ public class VoiceToActionService extends AccessibilityService {
          *
          */
         WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        for (FrameLayout tooltipLayout: tooltipLayouts){    // remove the list of current tooltips
-            if(tooltipLayout != null)
-                wm.removeView(tooltipLayout);   // remove them from the screen
+        for (TooltipRequiredNode tooltip: tooltipRequiredNodes){    // remove the list of current tooltips
+            if(tooltip.tooltipLayout != null)
+                wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
         }
         // reset all variables when changing to new screen.
-        tooltipLayouts.clear();
         currentTooltipCount = 0;
-        unlabeledNodes.clear();
+        tooltipRequiredNodes.clear();
+        foundLabeledNodes.clear();
     }
 
     private void configureListenButton() {
@@ -551,25 +573,23 @@ public class VoiceToActionService extends AccessibilityService {
          * This function will click a button (anything thats clickable) with provided information
          * param: word: a string to store data about what to click
          */
-
-        // Process inputs when autogenerated number label is used
-//        for (int i = 0; i < writtenNumbers.length; i++) {  // finding matching strings for numbers
-//            if (word.trim().toLowerCase().equals(writtenNumbers[i])) {
-//                if (unlabeledNodes.size() > i && unlabeledNodes.get(i).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
-//                    Log.d(debugLogTag, "Clicked on: " + i);    // log the information
-//                return true;
-//            }
-//
-//        }
-
         // Processes input first to determine if number label was called
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
             if (Integer.parseInt(word) < currentTooltipCount){
-                if (unlabeledNodes.size() > Integer.parseInt(word) && unlabeledNodes.get(Integer.parseInt(word)).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
+                if (tooltipRequiredNodes.size() > Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
                     Log.d(debugLogTag, "Clicked on: " + word);    // log the information
 
                 return true;
+            }
+        }
+
+        for(LabelFoundNode foundLabeledNode: foundLabeledNodes){
+            if(foundLabeledNode.label.contains(word)){
+                if (foundLabeledNode.nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
+                    Log.d(debugLogTag, "Clicked on:" + word);
+                }
+                return true;     // return once clicked
             }
         }
 
@@ -591,6 +611,8 @@ public class VoiceToActionService extends AccessibilityService {
 
             return true;     // return once clicked
         }
+
+
         return false;
     }
     public boolean commandExecution(String match){
