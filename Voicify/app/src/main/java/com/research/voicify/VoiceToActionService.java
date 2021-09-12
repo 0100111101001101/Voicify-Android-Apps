@@ -18,6 +18,7 @@ import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -256,7 +257,7 @@ public class VoiceToActionService extends AccessibilityService {
                     path.moveTo(midX, mid);
                     path.lineTo(midX, bottom);
                 // Scroll down
-                } else if (command.contains("up")){
+                } else if (command.contains("down")){
                     path.moveTo(midX, mid);
                     path.lineTo(midX, top);
                 } else if (command.contains("right")) {
@@ -639,8 +640,11 @@ public class VoiceToActionService extends AccessibilityService {
                             for(int i = 1;i < trimmedWords.size(); i++)
                                 openApp(trimmedWords.get(i));
                         } else if (initialWord.equals("scroll")){
-                            scrollingActivity(trimmedWords.get(1));
-                            isActionInvoked = true;
+                            if (trimmedWords.get(1) != null) {
+                                scrollingActivity(trimmedWords.get(1));
+                                isActionInvoked = true;
+                            }
+
                         } else {
                             Log.d(debugLogTag,trimmedWords.get(0));
                             if (clickButtonByText(trimmedWords.get(0))) {
