@@ -200,7 +200,7 @@ def entity_analysis(content, doc):
         for word in data:
 
             output1 = '{"text_extraction":{"text_segment":{"end_offset":' + str(word[2]) + \
-                      ',"start_offset":' + str(word[1]) + '}},"display_name":' + word[0] + '}'
+                      ',"start_offset":' + str(word[1]) + '}},"display_name":' + '"' + word[0] + '"' + '}'
 
             if index != 0:
                 finalOutput = finalOutput + ',' + output1
