@@ -193,13 +193,13 @@ def entity_analysis(content, doc):
 
     content = content.strip()
     data = clean_data(content)
-    finalOutput = ""
+    finalOutput = '{"annotation":['
     index = 0
 
     if len(data) != 0:
         for word in data:
 
-            output1 = '{"annotation":[{"text_extraction":{"text_segment":{"end_offset":' + str(word[2]) + \
+            output1 = '{"text_extraction":{"text_segment":{"end_offset":' + str(word[2]) + \
                       ',"start_offset":' + str(word[1]) + '}},"display_name":' + word[0] + '}'
 
             if index != 0:
@@ -208,7 +208,7 @@ def entity_analysis(content, doc):
                 finalOutput += output1
             index += 1
 
-        output3 = '],"text_snippet":{"content":' + content + '}\n'
+        output3 = '],"text_snippet":{"content":' + content + '}}\n'
         finalOutput += output3
 
     else:
