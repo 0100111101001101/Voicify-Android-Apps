@@ -451,7 +451,7 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private void checkAudioPermission() {
-        /*
+        /**
          * This function checks the permissions and starts the settings activity for the given app
          * for the user to enable the required permissions for the app to run as intended. (These
          * permissions were required after android marshmallow.
@@ -472,7 +472,7 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private boolean isLaunchTrigger(String word) {
-        /*
+        /**
          * This function checks the permissions and starts the settings activity for the given app
          * for the user to enable the required permissions for the app to run as intended. (These
          * permissions were required after android marshmallow.
@@ -536,7 +536,7 @@ public class VoiceToActionService extends AccessibilityService {
         // Processes input first to determine if number label was called
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
-            if (Integer.parseInt(word) < writtenNumbers.size()) {
+            if (Integer.parseInt(word) < currentTooltipCount){
                 if (unlabeledNodes.size() > Integer.parseInt(word) && unlabeledNodes.get(Integer.parseInt(word)).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
                     Log.d(debugLogTag, "Clicked on: " + word);    // log the information
                 return true;
@@ -562,7 +562,7 @@ public class VoiceToActionService extends AccessibilityService {
     }
 
     private void initializeSpeechRecognition() {
-        /*
+        /**
          * This function performs all the steps required for speech recognition initialisation
          */
 
