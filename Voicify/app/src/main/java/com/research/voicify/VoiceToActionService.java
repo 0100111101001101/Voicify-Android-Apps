@@ -6,6 +6,7 @@ import android.accessibilityservice.GestureDescription;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Path;
@@ -45,6 +46,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Collections;
+import java.util.Set;
+
+import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED;
+
 
 /**
  * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
@@ -55,6 +61,11 @@ import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.R)
 public class VoiceToActionService extends AccessibilityService {
+    final String FILE_NAME = "voicify";
+    final String ALL_COMMANDS = "all_commands";
+    SharedPreferences sharedPreferences;
+    ArrayList<String> predefinedCommands = new ArrayList<>();
+    ArrayList<String> currentSequence = new ArrayList<String>();
     AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
@@ -84,7 +95,11 @@ public class VoiceToActionService extends AccessibilityService {
         speechPrompt.put("stop", "Stopping voicify");
     }
 
+    ArrayList<String> savedCommands = new ArrayList<>();
+
     private int currentTooltipCount = 0;
+    boolean isRecording = false;
+    boolean isPlaying = false;
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         /**
@@ -94,18 +109,39 @@ public class VoiceToActionService extends AccessibilityService {
 
         // basic checks for null safety
         AccessibilityNodeInfo source = event.getSource();
+
         if (source == null) {
             return;
         }
 
         removeAllTooltips();    // remove all old  tooltip when screen changed
-        //clickableNodes.clear();
         currentSource = getRootInActiveWindow(); // update the current root node
         printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+        autoExecutePredefinedCommand();
+    }
 
+    public void autoExecutePredefinedCommand(){
+        /**
+         * This function will be triggered to execute any predefined set of action that has been started.
+         */
+        if(isPlaying){  // check if any sequence is triggered
+            if(currentSequence.size() == 0){       // check if there is still element to execute
+                Log.d(debugLogTag,"no more item to press");
+                isPlaying = false;      // finished the sequence
+            }
+            else if(commandExecution(currentSequence.get(0))){ // execute the oldest
+                currentSequence.remove(0);     // remove it if successful
+                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
+                isPlaying = true;       // keep playing true for next invocation
+            }
+        }
     }
 
     public void getScrollableNode(AccessibilityNodeInfo currentNode){
+        /**
+         * Get all the scrollable node in the current screen.
+         * @param: currentNode: the current node that is being checked ( start from root node and recursively for all node)
+         */
         if (currentNode == null) return;
         if(currentNode.isClickable()){
             scrollableNodes.add(currentNode);
@@ -125,18 +161,11 @@ public class VoiceToActionService extends AccessibilityService {
         if (nodeInfo == null) return;
         if(nodeInfo.isClickable()){
             String label = "";
-            if (nodeInfo.getText() != null || nodeInfo.getContentDescription() != null || event.getText().size() != 0) {
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
-                }
-                else if (event.getText().size() != 0) { // check if event has text
-                    label += event.getText();
-                }
-                else if (event.getContentDescription() != null) {   //check if event has content description
-                    label += event.getContentDescription();
-                }
-                else if (nodeInfo.getTooltipText() != null){
-                    label += nodeInfo.getTooltipText();
+                
+
+             
                 } else {        // no information about node or event (Tags to be assigned!)
                     //if(currentTooltipCount<15) {
                     Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
@@ -147,99 +176,56 @@ public class VoiceToActionService extends AccessibilityService {
                     currentTooltipCount += 1;
                     //}
                 }
-            }
+
             //clickableNodes.add(new Pair<>(label,nodeInfo));
-            Log.d(debugLogTag,"Available commands: " + label);
+           // Log.d(debugLogTag,"Available commands: " + label);
         }
         for (int i = 0; i < nodeInfo.getChildCount(); ++i) {
             printOutAllClickableElement(nodeInfo.getChild(i), depth + 1, event);    // recursive call
         }
     }
 
-    public void setTextForAllSubNode(AccessibilityNodeInfo nodeInfo, int depth, AccessibilityEvent event)  {
+    public void setTextForAllSubNode(AccessibilityNodeInfo nodeInfo, int depth, String text)  {
         /**
-         * This function will set text for all sub-node -- in experiment.
+         * This function will set text for all sub-node ( all element on the screen)
+         * @param: nodeInfo : current node that this function is called on ( will start from root node)
+         * @param: depth : the current level of leaf
+         * @param: text: the passed in text for writing in the edit text field.
          */
-        if (nodeInfo == null) return;
-        String logString = "";
-        for (int i = 0; i < depth; ++i) {
-            logString += " ";
+        if (nodeInfo == null) return;   // null check
+        if(nodeInfo.isEditable()){      // check if the node has editable field
+            setGivenText(nodeInfo,text);       // call a method to put in the text
         }
-        logString += "Type: " + nodeInfo.getClassName() + " " + " Content-Description: " + nodeInfo.getContentDescription();
-        //Log.v("Service Test", logString);
-        if(nodeInfo.isEditable()){
-            String label = " ";
-            if (nodeInfo.getText() != null || nodeInfo.getContentDescription() != null || event.getText().size() != 0) {
-                Log.e("Service Test", "Existing description found");
-                if (nodeInfo.getText() != null) {
-                    label += nodeInfo.getText();
-                    label += " / ";
-                }
-                else if (event.getText().size() != 0) {
-                    label += event.getText();
-                    label += " / ";
-                }
-                else if (event.getContentDescription() != null) {
-                    label += event.getContentDescription();
-                    label += " / ";
-                }
-            }
-            // setPromptedText(nodeInfo, label);
-            setAutoText(nodeInfo);
-        }
-        for (int i = 0; i < nodeInfo.getChildCount(); ++i) {
-            setTextForAllSubNode(nodeInfo.getChild(i), depth + 1, event);
+        for (int i = 0; i < nodeInfo.getChildCount(); ++i) {    // recursive call to reach all nested nodes/leaves
+            setTextForAllSubNode(nodeInfo.getChild(i), depth + 1, text);
         }
     }
 
-    public void setAutoText(AccessibilityNodeInfo currentNode){
+    public void setGivenText(AccessibilityNodeInfo currentNode, String text){
         /**
-         * This function is in experiment
+         * This function will set the text for a given node
+         * @param: currentNode: the node to store information about object that will be inserted the text.
+         * @param: text: the customized passed in text to be written in the field.
          */
         Bundle arguments = new Bundle();
         arguments.putCharSequence(AccessibilityNodeInfo
-                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "Set Text automatically");
+                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,text);
         currentNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
     }
 
-    public void setPromptedText(AccessibilityNodeInfo currentNode, String label)  {
-        /**
-         * This function is in experiment
-         */
-        Bundle arguments = new Bundle();
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(System.in));
-        // Reading data using readLine
-        String value = null;
-        try {
-            value = reader.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        arguments.putCharSequence(AccessibilityNodeInfo
-                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
-        currentNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
-    }
 
-    public void setTextForNode( AccessibilityNodeInfo currentNode, AccessibilityEvent event){
-        /**
-         * This function is in experiment
-         */
-        if (currentNode != null & event.getClassName().equals("android.widget.EditText")) {
-            //if(currentNode.isEditable()) Log.d("Service Test", "EDITABLE ");
-            Log.d("Service Test", "Child auto set text ");
-            setAutoText(currentNode);
-        }
-    }
 
     public void scrollingActivity(String command){
-
-        getScrollableNode(currentSource);
+        /**
+         * This function will work as scrolling the screen for user on invocation.
+         * @param: a string - can be up or down specifying the scrolling direction.
+         */
+        getScrollableNode(currentSource);   // get all scrollable not within current screen
         if(scrollableNodes.size() == 0) Log.d(debugLogTag,"Can't find item to scroll");
-        else {
+        else {      // if there exist item to be scrolled.
             for(AccessibilityNodeInfo node: scrollableNodes){
                 DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-
+                // scrolling using gesture builder.
                 final int height = displayMetrics.heightPixels;
                 final int top = (int) (height * .25);
                 final int mid = (int) (height * .5);
@@ -251,6 +237,7 @@ public class VoiceToActionService extends AccessibilityService {
 
                 GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
                 Path path = new Path();
+
 
                 // Scroll up
                 if (command.contains("up")) {
@@ -271,14 +258,12 @@ public class VoiceToActionService extends AccessibilityService {
                 gestureBuilder.addStroke(new GestureDescription.StrokeDescription(path, 100, 300));
                 dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
                     @Override
-                    public void onCompleted(GestureDescription gestureDescription) {
+                    public void onCompleted(GestureDescription gestureDescription) { // gesture execution
                         Log.d(debugLogTag,"Gesture Completed");
                         super.onCompleted(gestureDescription);
                     }
                 }, null);
             }
-
-
         }
     }
 
@@ -307,8 +292,16 @@ public class VoiceToActionService extends AccessibilityService {
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
         configureListenButton();
-
+        configureRecordButton();
+        configurePlayButton();
+        loadPresavedCommands();
         Log.d("Service Test","Service Connected");
+    }
+
+    private void loadPresavedCommands(){
+        sharedPreferences = getSharedPreferences(FILE_NAME,0);
+        Set<String> fetchedCommandSet = sharedPreferences.getStringSet(ALL_COMMANDS,null);
+        predefinedCommands.addAll(fetchedCommandSet);
     }
 
     private void createSwitch(){
@@ -356,7 +349,6 @@ public class VoiceToActionService extends AccessibilityService {
 
         TextView tooltip = tooltipLayout.findViewById(R.id.tooltip);    // set the count based on current count
         tooltip.setText(currentTooltipCount + "");
-        Log.d(debugLogTag,"Inflated tooltip: " + currentTooltipCount);
         tooltipLayouts.add(tooltipLayout);  // add the tooltip for removing later to the arraylist
     }
 
@@ -399,6 +391,38 @@ public class VoiceToActionService extends AccessibilityService {
                     isOn = false;
                     speechRecognizer.stopListening();           // on click listener to stop listening & processing data
                 }
+            }
+        });
+    }
+    private void configureRecordButton() {
+
+        Button listenBtn = (Button) mLayout.findViewById(R.id.recordBtn);
+        listenBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (listenBtn.getText().toString().equalsIgnoreCase("record")){
+                    listenBtn.setText("Save");
+                    isRecording = true;
+                    savedCommands.clear();
+
+                } else {
+                    listenBtn.setText("Record");
+                    isRecording = false;
+                    Log.d(debugLogTag," " + savedCommands.size());
+                    Log.d(debugLogTag," " + savedCommands);
+                }
+            }
+        });
+    }
+    private void configurePlayButton() {
+
+        Button listenBtn = (Button) mLayout.findViewById(R.id.playBtn);
+        listenBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+              commandExecution("find nearest mcdonald");
+
             }
         });
     }
@@ -539,6 +563,7 @@ public class VoiceToActionService extends AccessibilityService {
             if (Integer.parseInt(word) < currentTooltipCount){
                 if (unlabeledNodes.size() > Integer.parseInt(word) && unlabeledNodes.get(Integer.parseInt(word)).performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
                     Log.d(debugLogTag, "Clicked on: " + word);    // log the information
+
                 return true;
             }
         }
@@ -546,17 +571,90 @@ public class VoiceToActionService extends AccessibilityService {
         //Find ALL of the nodes that match the "text" argument.
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
                 Log.d(debugLogTag, "Clicked on:" + word);
+            }
             return true;     // return once clicked
         }
         // for some element that named with first capital word
         String camelCaseWord = word.substring(0, 1).toUpperCase() + word.substring(1);
         list = currentSource.findAccessibilityNodeInfosByText(camelCaseWord);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
                 Log.d(debugLogTag, "Clicked on:" + word);
+            }
+
             return true;     // return once clicked
+        }
+        return false;
+    }
+    public boolean commandExecution(String match){
+        /**
+         * This function will be called on user voice input as a string of command
+         * @param: match : the user command interpreted into a string
+         */
+        Log.d(debugLogTag, match);
+        String[] words = match.split(" ");
+        ArrayList<String> trimmedWords = new ArrayList<String>();
+        // ["open","uber"...]
+        Log.d(debugLogTag,match);
+
+        if(predefinedCommands.contains(match.toLowerCase())){
+            String commands  = sharedPreferences.getString(match,null);
+            Collections.addAll(currentSequence, commands.split(";"));
+            if(currentSequence.size() == 0){
+                Log.d(debugLogTag,"no more item to press");
+            }
+            else if(commandExecution(currentSequence.get(0))){
+                currentSequence.remove(0);
+                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
+                isPlaying = true;
+            }
+            return true;
+        }
+        for (int index=0; index< words.length; index++) {
+            String word = words[index].toLowerCase().trim();
+            trimmedWords.add(word);
+        }
+        boolean isActionInvoked = false;
+        String initialWord = trimmedWords.get(0) ; // first word from the command
+        if (initialWord.equals("back")){
+            performGlobalAction(GLOBAL_ACTION_BACK);
+            isActionInvoked = true;
+        } else if (initialWord.equals("home")){
+            performGlobalAction(GLOBAL_ACTION_HOME);
+            isActionInvoked = true;
+        } else if(launchTriggers.contains(initialWord)){
+            isActionInvoked = true;
+            for(int i = 1;i < trimmedWords.size(); i++)
+                openApp(trimmedWords.get(i));
+        } else if (initialWord.equals("enter")) {
+            String textToSet = match.substring(6);
+            setTextForAllSubNode(currentSource,0,textToSet);
+            isActionInvoked = true;
+        }
+        else if (initialWord.equals("scroll")){
+            scrollingActivity(trimmedWords.get(1));
+            isActionInvoked = true;
+        } else {
+            Log.d(debugLogTag,trimmedWords.get(0));
+            if (clickButtonByText(trimmedWords.get(0))) {
+                isActionInvoked = true;
+            }
+        }
+        if (isActionInvoked){
+            if(isRecording){
+                savedCommands.add(match);
+            }
+            AccessibilityManager manager = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (manager.isEnabled()) {
+                AccessibilityEvent e = AccessibilityEvent.obtain();
+                e.setEventType(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED);
+                e.setClassName(getClass().getName());
+                e.getText().add("User interaction invoked this event");
+                manager.sendAccessibilityEvent(e);
+            }
+        return true;
         }
         return false;
     }
@@ -608,6 +706,9 @@ public class VoiceToActionService extends AccessibilityService {
                     speechRecognizer.startListening(speechRecognizerIntent);
                 }
             }
+
+
+
             @Override
             public void onResults(Bundle results) {
                 // Called when recognition results are ready.
@@ -618,51 +719,7 @@ public class VoiceToActionService extends AccessibilityService {
 
                 if (matches!=null) {
                     for (String match : matches) {
-                        Log.d(debugLogTag, match);
-                        String[] words = match.split(" ");
-                        ArrayList<String> trimmedWords = new ArrayList<String>();
-                        // ["open","uber"...]
-                        Log.d(debugLogTag,match);
-                        for (int index=0; index< words.length; index++) {
-                            String word = words[index].toLowerCase().trim();
-                            trimmedWords.add(word);
-                        }
-                        boolean isActionInvoked = false;
-                        String initialWord = trimmedWords.get(0) ; // first word from the command
-                        if (initialWord.equals("back")){
-                            performGlobalAction(GLOBAL_ACTION_BACK);
-                            isActionInvoked = true;
-                        } else if (initialWord.equals("home")){
-                            performGlobalAction(GLOBAL_ACTION_HOME);
-                            isActionInvoked = true;
-                        } else if(launchTriggers.contains(initialWord)){
-                            isActionInvoked = true;
-                            for(int i = 1;i < trimmedWords.size(); i++)
-                                openApp(trimmedWords.get(i));
-                        } else if (initialWord.equals("scroll")){
-                            if (trimmedWords.get(1) != null) {
-                                scrollingActivity(trimmedWords.get(1));
-                                isActionInvoked = true;
-                            }
-
-                        } else {
-                            Log.d(debugLogTag,trimmedWords.get(0));
-                            if (clickButtonByText(trimmedWords.get(0))) {
-                                isActionInvoked = true;
-                            }
-                        }
-                        if (isActionInvoked){
-                            AccessibilityManager manager = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
-                            if (manager.isEnabled()) {
-                                AccessibilityEvent e = AccessibilityEvent.obtain();
-                                e.setEventType(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED);
-                                e.setClassName(getClass().getName());
-                                e.getText().add("User interaction invoked this event");
-                                manager.sendAccessibilityEvent(e);
-                            }
-
-
-                        }
+                        commandExecution(match);
                     }
                 }
                 speechRecognizer.startListening(speechRecognizerIntent);
