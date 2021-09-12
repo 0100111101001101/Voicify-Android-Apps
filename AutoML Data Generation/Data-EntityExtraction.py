@@ -169,10 +169,10 @@ def data_create():
                     string += string + "es"
 
                 if index//27 == 0:
-                    string = word2 + " " + word3 + " from the" + word1
+                    string = word2 + " " + word3 + " from the " + word1
 
                 elif index//26 == 0:
-                    string = word2 + " " + word3 + " from a" + word1
+                    string = word2 + " " + word3 + " from a " + word1
 
                 index += 1
 
@@ -193,7 +193,7 @@ def entity_analysis(content, doc):
 
     content = content.strip()
     data = clean_data(content)
-    finalOutput = '{"annotation":['
+    finalOutput = '{"annotations":['
     index = 0
 
     if len(data) != 0:
