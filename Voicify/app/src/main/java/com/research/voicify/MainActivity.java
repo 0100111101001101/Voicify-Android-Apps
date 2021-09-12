@@ -22,6 +22,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.Toast;
+
+import com.research.voicify.deeplink.DeepLinkAdd;
+import com.research.voicify.deeplink.DeepLinkList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     EditText speechTextOutlet;
     Button listenBtn;
     Switch ttsToggle;
-
+    Button deepLink;
     // NOTE: Global Variables below here
     List<String> argumentVector;
     int argumentCount = 0;
@@ -62,7 +66,14 @@ public class MainActivity extends AppCompatActivity {
         speechTextOutlet = findViewById(R.id.speechTextEditText);
         ttsToggle = (Switch) findViewById(R.id.ttsMaster);
         // NOTE: Set listeners to Views here
-
+        deepLink = findViewById(R.id.deeplinkpage);
+        deepLink.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent myIntent = new Intent(MainActivity.this, DeepLinkList.class);
+                startActivity(myIntent);
+            }
+        });
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
