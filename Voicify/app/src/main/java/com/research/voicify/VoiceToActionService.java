@@ -48,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
+import java.lang.Math;
 
 import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED;
 
@@ -170,9 +171,10 @@ public class VoiceToActionService extends AccessibilityService {
                     //if(currentTooltipCount<15) {
                     Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
                     nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                    inflateTooltip(rectTest.left, rectTest.top);    // call function to create number tooltips
+                    //inflateTooltip((rectTest.left + rectTest.right)/2, rectTest.top);    // call function to create number tooltips
+                    inflateTooltip(rectTest.right, rectTest.top);    // call function to create number tooltips
                     unlabeledNodes.add(nodeInfo);                   // add to the list to retrieve later
-                    Log.d(debugLogTag, currentTooltipCount+ ": " + rectTest.top + " " + rectTest.left);
+                    Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
                     currentTooltipCount += 1;
                     //}
                 }
@@ -184,6 +186,7 @@ public class VoiceToActionService extends AccessibilityService {
             printOutAllClickableElement(nodeInfo.getChild(i), depth + 1, event);    // recursive call
         }
     }
+
 
     public void setTextForAllSubNode(AccessibilityNodeInfo nodeInfo, int depth, String text)  {
         /**
@@ -301,7 +304,9 @@ public class VoiceToActionService extends AccessibilityService {
     private void loadPresavedCommands(){
         sharedPreferences = getSharedPreferences(FILE_NAME,0);
         Set<String> fetchedCommandSet = sharedPreferences.getStringSet(ALL_COMMANDS,null);
-        predefinedCommands.addAll(fetchedCommandSet);
+        if (fetchedCommandSet != null) {
+            predefinedCommands.addAll(fetchedCommandSet);
+        }
     }
 
     private void createSwitch(){
@@ -342,7 +347,7 @@ public class VoiceToActionService extends AccessibilityService {
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
         lp.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
         lp.x = x;       // x location
-        lp.y = y;       // y location
+        lp.y = y - 100;       // y location
         LayoutInflater inflater = LayoutInflater.from(this);
         inflater.inflate(R.layout.tooltip_number, tooltipLayout);   // inflate the view to the screen
         wm.addView(tooltipLayout, lp);
