@@ -158,18 +158,18 @@ public class VoiceToActionService extends AccessibilityService {
             String label = "";
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
+                     Log.d(debugLogTag,"Available commands: " + label);
                     return;
                 } else {
-
                     // no information about node or event (Tags to be assigned!)
                     String foundLabel  = searchForTextView(nodeInfo,"");
                     if (!foundLabel.equals("")){
                         foundLabeledNodes.add(new LabelFoundNode(nodeInfo,foundLabel.toLowerCase()));
+                        Log.d(debugLogTag,"Available commands: " +foundLabel.toLowerCase());
                     } else {
                         Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
                         nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                        //inflateTooltip((rectTest.left + rectTest.right)/2, rectTest.top);    // call function to create number tooltips
-                        if(rectTest.right < width && rectTest.bottom<height){
+                         if(rectTest.right < width && rectTest.bottom<height){
                             Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
                             inflateTooltip(rectTest.right, rectTest.top, nodeInfo);    // call function to create number tooltips
 
@@ -577,19 +577,22 @@ public class VoiceToActionService extends AccessibilityService {
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
             if (Integer.parseInt(word) < currentTooltipCount){
-                if (tooltipRequiredNodes.size() > Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK))    // perform click with condition to return once click is successful
-                    Log.d(debugLogTag, "Clicked on: " + word);    // log the information
+                if (tooltipRequiredNodes.size() > Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    // perform click with condition to return once click is successful
+                    Log.d(debugLogTag, "Clicked number: " + word);    // log the information
+                    return true;
+                }
 
-                return true;
             }
         }
 
         for(LabelFoundNode foundLabeledNode: foundLabeledNodes){
             if(foundLabeledNode.label.contains(word)){
                 if (foundLabeledNode.nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                    Log.d(debugLogTag, "Clicked on:" + word);
+                    Log.d(debugLogTag, "Clicked on description:" + word);
+                    return true;
                 }
-                return true;     // return once clicked
+  // return once clicked
             }
         }
 
@@ -597,7 +600,7 @@ public class VoiceToActionService extends AccessibilityService {
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on:" + word);
+                Log.d(debugLogTag, "Clicked on item:" + word);
             }
             return true;     // return once clicked
         }
@@ -606,7 +609,7 @@ public class VoiceToActionService extends AccessibilityService {
         list = currentSource.findAccessibilityNodeInfosByText(camelCaseWord);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on:" + word);
+                Log.d(debugLogTag, "Clicked on item:" + word);
             }
 
             return true;     // return once clicked
@@ -620,11 +623,9 @@ public class VoiceToActionService extends AccessibilityService {
          * This function will be called on user voice input as a string of command
          * @param: match : the user command interpreted into a string
          */
-        Log.d(debugLogTag, match);
         String[] words = match.split(" ");
         ArrayList<String> trimmedWords = new ArrayList<String>();
         // ["open","uber"...]
-        Log.d(debugLogTag,match);
 
         if(predefinedCommands.contains(match.toLowerCase())){
             String commands  = sharedPreferences.getString(match,null);
@@ -663,8 +664,8 @@ public class VoiceToActionService extends AccessibilityService {
         else if (initialWord.equals("scroll")){
             scrollingActivity(trimmedWords.get(1));
             isActionInvoked = true;
-        } else {
-            Log.d(debugLogTag,trimmedWords.get(0));
+        } else if(!trimmedWords.get(0).equals("")){
+            Log.d(debugLogTag,"clicking invoked for:" + trimmedWords.get(0));
             if (clickButtonByText(trimmedWords.get(0))) {
                 isActionInvoked = true;
             }
