@@ -2,8 +2,8 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-applications = [
-    "Doordash",
+
+normal_app_names = [
     "UberEats",
     "Swiggy",
     "Zomato",
@@ -25,20 +25,9 @@ applications = [
     'Doordash',
     'Netflix',
     'Gmail',
-    'Google Maps',
-    'Uber Eats',
-    'mymacca’s Ordering & Offers',
-    'Microsoft Teams',
     'Widgetsmith',
-    'WikiCamps Australia',
-    'The Wonder Weeks',
-    'Sezzy Timer',
     'Procreate Pocket',
-    'TripView - Sydney & Melbourne',
     'TouchRetouch',
-    'Forest - Stay focused',
-    'Monash University FODMAP diet',
-    'AutoSleep Track Sleep on Watch',
     'Rain Parrot',
     'Facetune',
     'SkyView',
@@ -52,79 +41,110 @@ applications = [
     'OfficeSuite',
     'Imgur',
     'KineMaster',
-    'Adobe Photoshop Express',
-    'Adobe Lightroom',
+]
+
+faulty_app_names = [
+    'musics player',
+    'musical player',
+    'store',
+
+]
+
+unnecessary_word_app_names = [
     'Facebook Messenger',
     'Asana project management app',
-    'Uber Eats',
-    'Duolingo learn languages free',
-
+    'Google Play Store',
+    'Google Maps',
+    'Google Gmail'
 ]
 
-actions = [
-    'search',
-    'find',
-    'enter',
-    'look up',
-    'open',
-    'get',
-    'order',
-    'launch',
-    'click',
-    'scroll',
-    'swipe',
-    'move'
+multi_word_apps = [
+    'WikiCamps Australia',
+    'The Wonder Weeks',
+    'Sezzy Timer',
+    'Adobe Photoshop Express',
+    'Adobe Lightroom',
+    'mymacca’s Ordering & Offers',
+    'Microsoft Teams',
+    'TripView - Sydney & Melbourne',
+    'AutoSleep Track Sleep on Watch',
 ]
 
-foods = [
+click_actions = [
+    'click', 'tap', 'touch'
+]
+
+open_actions = [
+    'open', 'launch', 'start'
+]
+
+scroll_actions = [
+    'scroll up',
+    'swipe up',
+    'scroll down',
+    'swipe down',
+    'scroll left',
+    'swipe left',
+    'scroll right',
+    'swipe right',
+]
+
+enter_actions = [
+    'enter', 'search', 'find', 'look up',
+]
+locations = [
     'Fish and chips',
     'Sandwich',
-    'Pita',
     'Hamburger',
-    'Fried chicken',
-    'French fries',
-    'Onion ring',
     'Chicken nugget',
-    'Taco',
     'Pizza',
     'Hot dog',
     'Ice cream',
-    'Salad',
-    'Marmalade',
-    'Ham',
-    'Egg',
-    'Bread',
     'Breakfast burrito',
     'Hot chocolate',
-    'Bacon',
-    'Donut',
-    'Porridge',
-    'Muffin',
-    'Waffle',
     'Tomato',
     'Croissant',
     'Pancake',
-    'Toast',
     'sandwich',
-    'Yogurt',
-    'Cheese',
-    'Milk',
-    'Sausage',
-    'Orange juice',
-    'Breakfast cereal',
     'Coffee',
     'Fried chicken',
-    'Omelet',
     'Pizza',
     'Kebab',
-    'Fish',
-    'Steak',
-    'Broth',
-    'Tossed salad',
-    'Dressing',
-    'Pasta',
-    'Rice',
-    'Soup'
+    'bar',
+    'bank',
+    'bakery',
+    'airport',
+    'bookstore ',
+    'station',
+    'church',
+    'court',
+    'department store',
+    'cinema ',
+    'gym',
+    'hospital',
+    'hotel',
+    'zoo',
+    'supermarket',
+    'school',
+    'restaurant',
+    'park',
+    'motel',
+    'pharmacy',
+    'museum',
+    'mall',
+    'library',
+    'library',
+    'motel',
+    'ATM',
+    'kindergarten',
+]
+
+all_apps = [*normal_app_names, *multi_word_apps, *faulty_app_names, *unnecessary_word_app_names]
+
+articles = [
+    'a',
+    'an',
+    'the'
 ]
 
 fillers = [
@@ -140,16 +160,20 @@ fillers = [
     'So',
     'Please',
     'We',
-    'a',
-    'an'
+
 ]
 
 item = [
-    'iPhone',
-    'Hot toys',
-    'comics',
-    'carpets',
-    'crockery'
+    'clothes',
+    'grocery',
+    'food',
+    'shoes',
+    'cosmetics',
+    'equipment',
+    'electronics',
+    'household appliance',
+    'smartphone',
+    'juice'
 ]
 
 
@@ -157,11 +181,10 @@ def data_create():
 
     outputStr = []
     index = 0
-    for word1 in applications:
-        for word2 in actions:
-            for word3 in foods:
-                string = word2 + " " + word3 + " from " + word1
-
+    for app in normal_app_names:
+        for word2 in open_actions:
+            for word3 in item:
+                string = word2 + " " + word3 + " from " + app
                 if index//22 == 0:
                     string += string + "s"
 
@@ -169,23 +192,50 @@ def data_create():
                     string += string + "es"
 
                 if index//27 == 0:
-                    string = word2 + " " + word3 + " from the " + word1
+                    string = word2 + " " + word3 + " from the " + app
 
                 elif index//26 == 0:
-                    string = word2 + " " + word3 + " from a " + word1
-
+                    string = word2 + " " + word3 + " from a " + app
                 index += 1
-
                 outputStr.append(string)
-
-    for word1 in applications:
-        for word2 in actions:
+        for word2 in open_actions:
             for word4 in item:
-                string = word2 + " " + word1 + ' and then ' + word2 + ' down and search ' + word4
-
+                string = word2 + " " + app + ' and then ' + word2 + ' down and search ' + word4
                 outputStr.append(string)
 
+    # open (App name) app
+    counter = 0
+    for open_word in open_actions:
+        for app in all_apps:
+            if counter % 5 == 0:
+                string = open_word + " the " + app
+            elif counter % 7 == 0:
+                string =   open_word + " a " + app
+            else:
+                string = open_word + " " + app
+            if counter % 20 == 0:
+                string += " app"
+            counter = counter + 1
+            outputStr.append(string)
     print(outputStr)
+
+    # search something in app
+    counter = 0
+    for enter_word in enter_actions:
+        for app in all_apps:
+            for location in locations:
+                if counter % 5 == 0:
+                    string = enter_word + " " + location + " the " + app
+                elif counter % 7 == 0:
+                    string = enter_word + " " + location + " a " + app
+                else:
+                    string = enter_word + " " + location + app
+                if counter % 20 == 0:
+                    string += " app"
+                counter = counter + 1
+                outputStr.append(string)
+    print(outputStr)
+
     return outputStr
 
 
