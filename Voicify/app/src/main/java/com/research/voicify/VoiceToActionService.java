@@ -44,6 +44,7 @@ import com.research.voicify.elements.TooltipRequiredNode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -436,6 +437,19 @@ public class VoiceToActionService extends AccessibilityService {
                 } else {
                     listenBtn.setText("Record");
                     isRecording = false;
+                    if (savedCommands.size() >0){
+                        String commands = "";
+                        for(String command: savedCommands){
+                            commands += command + ";";
+                        }
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        predefinedCommands.add("new command");
+                        Set<String> newCommands = new HashSet<>(predefinedCommands);
+                        editor.putStringSet(ALL_COMMANDS,newCommands);
+                        editor.putString("new command",commands);
+                        editor.apply();
+                    }
+
                     Log.d(debugLogTag," " + savedCommands.size());
                     Log.d(debugLogTag," " + savedCommands);
                 }
@@ -449,7 +463,7 @@ public class VoiceToActionService extends AccessibilityService {
             @Override
             public void onClick(View view) {
 
-              commandExecution("find nearest mcdonald");
+              commandExecution("new command");
 
             }
         });
