@@ -35,7 +35,16 @@ public class DeepLinkList extends AppCompatActivity {
         setContentView(R.layout.deeplink);
 
         recyclerView = findViewById(R.id.deeplink_list);        // set the recycler view with id
+        recyclerView.addOnItemTouchListener(
+                new RecyclerClickListener(getApplicationContext(), recyclerView ,new RecyclerClickListener.OnItemClickListener() {
+                    @Override public void onItemClick(View view, int position) {
+                        Intent myIntent = new Intent(DeepLinkList.this, DeepLinkAdd.class);
+                        myIntent.putExtra("currentItem",allDeepLinkItems.get(position).title);
+                        startActivity(myIntent);
+                    }
 
+                })
+        );
         // invoking shared preferences for storing and retrieving data
         sharedPreferences = getSharedPreferences(FILE_NAME,0);
         Set<String> fetchedCommandSet = sharedPreferences.getStringSet(ALL_COMMANDS,null);
@@ -69,7 +78,6 @@ public class DeepLinkList extends AppCompatActivity {
         addBtn.setOnClickListener(new View.OnClickListener() {      // implement the "add" button, go to the new activity.
             @Override
             public void onClick(View v) {
-
                 Intent myIntent = new Intent(DeepLinkList.this, DeepLinkAdd.class);
                 startActivity(myIntent);
             }

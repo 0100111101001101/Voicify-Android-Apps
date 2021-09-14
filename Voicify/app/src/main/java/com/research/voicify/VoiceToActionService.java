@@ -30,6 +30,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -76,6 +77,7 @@ public class VoiceToActionService extends AccessibilityService {
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
+    WindowManager wm;
 
     //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
     private static final Map<String,String> speechPrompt=new HashMap<String,String>();
@@ -301,7 +303,7 @@ public class VoiceToActionService extends AccessibilityService {
         * */
 
         super.onServiceConnected();
-
+        wm  = (WindowManager) getSystemService(WINDOW_SERVICE);
         createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
@@ -333,7 +335,6 @@ public class VoiceToActionService extends AccessibilityService {
          * connected and will be gone when service is shutdown
          *
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE); //
         mLayout = new FrameLayout(this);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
@@ -348,6 +349,7 @@ public class VoiceToActionService extends AccessibilityService {
         wm.addView(mLayout, lp);       // add it to the screen
     }
 
+
     private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
         /**
          * This function will configure each of the tooltip on the screen, so this function will be
@@ -355,7 +357,7 @@ public class VoiceToActionService extends AccessibilityService {
          * param: x is the location in x axis
          * param: y is the location in y axis
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);    // window manager
+          // window manager
         FrameLayout tooltipLayout = new FrameLayout(this);      // create new layout for each tooltip
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
@@ -384,7 +386,6 @@ public class VoiceToActionService extends AccessibilityService {
          * This function will be called when something changed on the screen, reset all tooltips.
          *
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         for (TooltipRequiredNode tooltip: tooltipRequiredNodes){    // remove the list of current tooltips
             if(tooltip.tooltipLayout != null)
                 wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
@@ -566,6 +567,13 @@ public class VoiceToActionService extends AccessibilityService {
         i.putExtra("message", toSpeak);
         // starts service for intent
         startService(i);
+    }
+
+    public void findNearbyMapDeepLink(String location){
+        Uri gmmIntentUri = Uri.parse("geo:0,0?q="+location);
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+        mapIntent.setPackage("com.google.android.apps.maps");
+        startActivity(mapIntent);
     }
 
     boolean clickButtonByText(String word) {
