@@ -43,6 +43,7 @@ import com.research.voicify.elements.TooltipRequiredNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,7 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
-
+import java.util.Calendar;
 
 /**
  * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
@@ -79,7 +80,7 @@ public class VoiceToActionService extends AccessibilityService {
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
     WindowManager wm;
-
+    long currentTime;
     //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
     private static final Map<String,String> speechPrompt=new HashMap<String,String>();
     static {
@@ -111,11 +112,24 @@ public class VoiceToActionService extends AccessibilityService {
         if (source == null) {
             return;
         }
+        if(isNotBlockedEvent()) {
+            removeAllTooltips();    // remove all old  tooltip when screen changed
+            currentSource = getRootInActiveWindow(); // update the current root node
+            printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+            autoExecutePredefinedCommand();
+        }
 
-        removeAllTooltips();    // remove all old  tooltip when screen changed
-        currentSource = getRootInActiveWindow(); // update the current root node
-        printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
-        autoExecutePredefinedCommand();
+    }
+
+    public boolean isNotBlockedEvent(){
+        Date date = new Date();
+        long time = date.getTime();
+        if (time - currentTime > 500){
+            currentTime = time;
+            return true;
+        }
+        Log.d(debugLogTag, "Event blocked for repetitive calls");
+        return false;
     }
 
     public void autoExecutePredefinedCommand(){
@@ -174,7 +188,7 @@ public class VoiceToActionService extends AccessibilityService {
                         nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
                          if(rectTest.right < width && rectTest.bottom<height){
                             Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
-                            inflateTooltip(rectTest.right, rectTest.top, nodeInfo);    // call function to create number tooltips
+                            inflateTooltip((rectTest.right+rectTest.left)/2, rectTest.top, nodeInfo);    // call function to create number tooltips
 
                         }
                     }
@@ -305,6 +319,8 @@ public class VoiceToActionService extends AccessibilityService {
 
         super.onServiceConnected();
         wm  = (WindowManager) getSystemService(WINDOW_SERVICE);
+        Date date = new Date();
+        currentTime = date.getTime();
         createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
@@ -651,6 +667,7 @@ public class VoiceToActionService extends AccessibilityService {
 
         if(predefinedCommands.contains(match.toLowerCase())){
             String commands  = sharedPreferences.getString(match,null);
+            currentSequence.clear();
             Collections.addAll(currentSequence, commands.split(";"));
             if(currentSequence.size() == 0){
                 Log.d(debugLogTag,"no more item to press");
