@@ -92,19 +92,16 @@ scroll_actions = [
 enter_actions = [
     'enter', 'search', 'find', 'look up',
 ]
+
+plurals = [
+    "buses", "boxes", "boats", "woman", "children", "cinemas", "hoodies"
+]
 locations = [
     'Fish and chips',
-    'Sandwich',
     'Hamburger',
-    'Chicken nugget',
     'Pizza',
     'Hot dog',
-    'Ice cream',
-    'Breakfast burrito',
-    'Hot chocolate',
-    'Tomato',
     'Croissant',
-    'Pancake',
     'sandwich',
     'Coffee',
     'Fried chicken',
@@ -137,6 +134,7 @@ locations = [
     'motel',
     'ATM',
     'kindergarten',
+    'Fast food'
 ]
 
 all_apps = [*normal_app_names, *multi_word_apps, *faulty_app_names, *unnecessary_word_app_names]
@@ -176,71 +174,115 @@ item = [
     'juice'
 ]
 
+booleans = [
+    "or", "and", "not", "then", "after that"
+]
+
 
 def data_create():
-
     outputStr = []
     index = 0
     for app in normal_app_names:
         for word2 in open_actions:
             for word3 in item:
                 string = word2 + " " + word3 + " from " + app
-                if index//22 == 0:
+                if index // 22 == 0:
                     string += string + "s"
 
-                elif index//24 == 0:
+                elif index // 24 == 0:
                     string += string + "es"
 
-                if index//27 == 0:
+                if index // 27 == 0:
                     string = word2 + " " + word3 + " from the " + app
 
-                elif index//26 == 0:
+                elif index // 26 == 0:
                     string = word2 + " " + word3 + " from a " + app
                 index += 1
-                outputStr.append(string)
+                # outputStr.append(string)
         for word2 in open_actions:
             for word4 in item:
                 string = word2 + " " + app + ' and then ' + word2 + ' down and search ' + word4
-                outputStr.append(string)
+                # outputStr.append(string)
 
     # open (App name) app
     counter = 0
     for open_word in open_actions:
         for app in all_apps:
+            counter = counter + 1
+            if counter % 8 == 0:
+                continue
             if counter % 5 == 0:
                 string = open_word + " the " + app
             elif counter % 7 == 0:
-                string =   open_word + " a " + app
+                string = open_word + " a " + app
             else:
                 string = open_word + " " + app
             if counter % 20 == 0:
                 string += " app"
-            counter = counter + 1
+
             outputStr.append(string)
     print(outputStr)
 
     # search something in app
     counter = 0
+    swipe_counter = 0
+    search_counter = 0
+    click_counter = 0
     for enter_word in enter_actions:
         for app in all_apps:
             for location in locations:
-                if counter % 5 == 0:
-                    string = enter_word + " " + location + " the " + app
-                elif counter % 7 == 0:
-                    string = enter_word + " " + location + " a " + app
-                else:
-                    string = enter_word + " " + location + app
-                if counter % 20 == 0:
-                    string += " app"
                 counter = counter + 1
-                outputStr.append(string)
-    print(outputStr)
 
+                if counter % 2 == 0:
+                    continue
+                if counter % 11 == 0:
+                    string = enter_word + " " + location + " from the " + app
+                elif counter % 13 == 0:
+                    string = enter_word + " " + location + " from a " + app
+                elif counter % 15 == 0:
+                    string = enter_word + " " + location + " in " + app
+                elif counter % 17 == 0:
+                    string = enter_word + " " + location + " " + app
+                elif counter % 19 == 0:
+                    string = enter_word + " " + location + " an " + app
+                else:
+                    string = enter_word + " " + location + " from " + app
+                if counter % 23 == 0:
+                    string += " app"
+                if counter % 39 == 0:
+                    string += " and " + scroll_actions[swipe_counter % len(scroll_actions)]
+                    swipe_counter += 1
+                if counter % 35 == 0:
+                    string += " and search " + locations[search_counter % len(locations)]
+                    search_counter += 1
+                if counter % 37 == 0:
+                    string += " and click " + locations[click_counter % len(locations)]
+                    click_counter += 1
+                if counter % 33 == 0:
+                    string = open_actions[swipe_counter % len(open_actions)] + " " + all_apps[
+                        counter % len(all_apps)] + " " + booleans[search_counter % len(booleans)] + " " + all_apps[
+                                 swipe_counter % len(all_apps)] + " "+  booleans[counter % len(booleans)]+" " + enter_actions[
+                                 swipe_counter % len(enter_actions)] + " " + item[
+                                 counter % len(item)] + " " +  booleans[swipe_counter % len(booleans)] + " from " + locations[search_counter % len(locations)]
+                outputStr.append(string)
+    # plurals
+    for enter_word in enter_actions:
+        for app in normal_app_names:
+            for noun in plurals:
+                counter = counter + 1
+                if counter % 11 == 0:
+                    string = enter_word + " " + noun + " from the " + app
+                    outputStr.append(string)
+                elif counter % 17 == 0:
+                    string = enter_word + " " + noun + " in " + app
+                    outputStr.append(string)
+
+    print(outputStr)
+    print(len(outputStr))
     return outputStr
 
 
 def entity_analysis(content, doc):
-
     content = content.strip()
     data = clean_data(content)
     finalOutput = '{"annotations":['
@@ -269,7 +311,6 @@ def entity_analysis(content, doc):
 
 
 def clean_data(unclean_data):
-
     # unclean_data = joinApp(unclean_data)
     unclean_data = unclean_data.split(' ')
     end_offset = 0
@@ -297,37 +338,99 @@ def clean_data(unclean_data):
             continue
 
         check1 = False
-        for word1 in applications:
+        for word1 in click_actions:
             word1 = word1.lower()
             if word == word1:
-                entity = "Applications"
+                entity = "Click Action"
                 check1 = True
 
         check2 = False
         if entity == '':
-            for word2 in foods:
+            for word2 in scroll_actions:
                 word2 = word2.lower()
                 if word == word2:
-                    entity = "Foods"
+                    entity = "Scroll Action"
                     check2 = True
 
         check3 = False
         if entity == '':
-            for word3 in actions:
+            for word3 in open_actions:
                 word3 = word3.lower()
                 if word == word3:
-                    entity = "Actions"
+                    entity = "Open Action"
                     check3 = True
 
-        # check4 = False
-        # if entity == '':
-        #     for word4 in food_application:
-        #         word4 = word4.lower()
-        #         if word == word4:
-        #             entity = "Food Application"
-        #             check4 = True
+        check4 = False
+        if entity == '':
+            for word4 in enter_actions:
+                word4 = word4.lower()
+                if word4 == word4:
+                    entity = "Enter Action"
+                    check4 = True
 
-        if not (check1 or check2 or check3):
+        check5 = False
+        if entity == '':
+            for word5 in unnecessary_word_app_names:
+                word5 = word5.lower()
+                if word == word5:
+                    entity = "Unnecessary App Name"
+                    check5 = True
+
+        check6 = False
+        if entity == '':
+            for word6 in multi_word_apps:
+                word6 = word6.lower()
+                if word == word6:
+                    entity = "Multi Word App Name"
+                    check6 = True
+        check7 = False
+        if entity == '':
+            for word7 in faulty_app_names:
+                word7 = word7.lower()
+                if word7 == word7:
+                    entity = "Ambiguous App Name"
+                    check7 = True
+
+        check8 = False
+        if entity == '':
+            for word8 in normal_app_names:
+                word8 = word8.lower()
+                if word == word8:
+                    entity = "Normal App Name"
+                    check8 = True
+
+        check9 = False
+        if entity == '':
+            for word9 in plurals:
+                word9 = word9.lower()
+                if word == word9:
+                    entity = "Plurals Noun"
+                    check9 = True
+
+        check10 = False
+        if entity == '':
+            for word10 in locations:
+                word10 = word10.lower()
+                if word == word10:
+                    entity = "Location"
+                    check10 = True
+        check11 = False
+        if entity == '':
+            for word11 in item:
+                word11 = word11.lower()
+                if word == word11:
+                    entity = "Item"
+                    check11 = True
+
+        check12 = False
+        if entity == '':
+            for word12 in booleans:
+                word12 = word12.lower()
+                if word == word12:
+                    entity = "Boolean"
+                    check12 = True
+
+        if not (check1 or check2 or check3 or check4 or check5 or check6 or check7 or check8 or check9 or check10 or check11 or check12):
             continue
 
         data.append((entity, start_offset, end_offset))
