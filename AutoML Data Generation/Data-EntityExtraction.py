@@ -7,46 +7,43 @@ normal_app_names = [
     "UberEats",
     "Swiggy",
     "Zomato",
-    'Slack',
     'Google',
-    'COVIDSafe',
-    'ZOOM',
-    'Smart Launcher',
     'TikTok',
     'Houseparty',
     'Instagram',
-    'Coronavirus Australia',
     'Disney',
-    'WhatsApp Messenger',
     'YouTube',
-    'Spotify',
     'Snapchat',
     'Facebook',
     'Doordash',
     'Netflix',
     'Gmail',
-    'Widgetsmith',
-    'Procreate Pocket',
-    'TouchRetouch',
-    'Rain Parrot',
-    'Facetune',
     'SkyView',
     'MusicView',
     'Shadowrocket',
-    "Slack",
-    'LastPass',
+    "OpenTable",
     'Grammarly',
     'Dropbox',
-    'Google Drive',
-    'OfficeSuite',
-    'Imgur',
-    'KineMaster',
+    'Foodora',
+    'Menulog',
+    'Deliveroo',
+    'EatNow',
+    'Waze',
+    'Mapquest',
+
 ]
 
 faulty_app_names = [
     'musics player',
     'musical player',
     'store',
+    'google eats',
+    'Gogle Maps',
+    'uber dash',
+    'MenuEats',
+    'Wave',
+    'Delivery'
+    'UberEat'
 
 ]
 
@@ -55,10 +52,19 @@ unnecessary_word_app_names = [
     'Asana project management app',
     'Google Play Store',
     'Google Maps',
-    'Google Gmail'
+    'Google Gmail',
+    'Uber Eats order food',
+    'Doordash delivery',
+
+
 ]
 
 multi_word_apps = [
+    'Mapfactor Navigator'
+    'Scout GPS',
+    'Happy Cow',
+    'Restaurant Finder',
+    'WhatsApp Messenger',
     'WikiCamps Australia',
     'The Wonder Weeks',
     'Sezzy Timer',
@@ -94,7 +100,7 @@ enter_actions = [
 ]
 
 plurals = [
-    "buses", "boxes", "boats", "woman", "children", "cinemas", "hoodies"
+    "buses", "boxes", "boats", "women", "children", "cinemas", "hoodies"
 ]
 locations = [
     'Fish and chips',
@@ -161,7 +167,7 @@ fillers = [
 
 ]
 
-item = [
+items = [
     'clothes',
     'grocery',
     'food',
@@ -174,7 +180,7 @@ item = [
     'juice'
 ]
 
-booleans = [
+conjunctions = [
     "or", "and", "not", "then", "after that"
 ]
 
@@ -184,7 +190,7 @@ def data_create():
     index = 0
     for app in normal_app_names:
         for word2 in open_actions:
-            for word3 in item:
+            for word3 in items:
                 string = word2 + " " + word3 + " from " + app
                 if index // 22 == 0:
                     string += string + "s"
@@ -200,7 +206,7 @@ def data_create():
                 index += 1
                 # outputStr.append(string)
         for word2 in open_actions:
-            for word4 in item:
+            for word4 in items:
                 string = word2 + " " + app + ' and then ' + word2 + ' down and search ' + word4
                 # outputStr.append(string)
 
@@ -221,7 +227,6 @@ def data_create():
                 string += " app"
 
             outputStr.append(string)
-    print(outputStr)
 
     # search something in app
     counter = 0
@@ -253,17 +258,17 @@ def data_create():
                     string += " and " + scroll_actions[swipe_counter % len(scroll_actions)]
                     swipe_counter += 1
                 if counter % 35 == 0:
-                    string += " and search " + locations[search_counter % len(locations)]
+                    string += " and " + enter_actions[search_counter % len(enter_actions)]+ " " + locations[search_counter % len(locations)]
                     search_counter += 1
                 if counter % 37 == 0:
-                    string += " and click " + locations[click_counter % len(locations)]
+                    string += " and " + click_actions[click_counter % len(click_actions)] + " " + locations[click_counter % len(locations)]
                     click_counter += 1
                 if counter % 33 == 0:
                     string = open_actions[swipe_counter % len(open_actions)] + " " + all_apps[
-                        counter % len(all_apps)] + " " + booleans[search_counter % len(booleans)] + " " + all_apps[
-                                 swipe_counter % len(all_apps)] + " "+  booleans[counter % len(booleans)]+" " + enter_actions[
-                                 swipe_counter % len(enter_actions)] + " " + item[
-                                 counter % len(item)] + " " +  booleans[swipe_counter % len(booleans)] + " from " + locations[search_counter % len(locations)]
+                        counter % len(all_apps)] + " " + conjunctions[search_counter % len(conjunctions)] + " " + all_apps[
+                                 swipe_counter % len(all_apps)] + " "+  conjunctions[counter % len(conjunctions)]+" " + enter_actions[
+                                 swipe_counter % len(enter_actions)] + " " + items[
+                                 counter % len(items)] + " " +  conjunctions[swipe_counter % len(conjunctions)] + " from " + locations[search_counter % len(locations)]
                 outputStr.append(string)
     # plurals
     for enter_word in enter_actions:
@@ -277,14 +282,15 @@ def data_create():
                     string = enter_word + " " + noun + " in " + app
                     outputStr.append(string)
 
-    print(outputStr)
     print(len(outputStr))
     return outputStr
 
 
 def entity_analysis(content, doc):
     content = content.strip()
-    data = clean_data(content)
+    data = clean_data2(content)
+    if len(data) == 0:
+        return
     finalOutput = '{"annotations":['
     index = 0
 
@@ -308,6 +314,84 @@ def entity_analysis(content, doc):
 
     value = str(finalOutput)
     doc.write(str(value))
+
+def clean_data2(unclean_data):
+
+    data = []
+
+    for word in click_actions:
+        word = word.lower()
+        if unclean_data.find(word) != -1:
+            entity = "Click Action"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+            # print(unclean_data)
+            # print((unclean_data.find(word1)))
+            # print(unclean_data.find(word1)+len(word1))
+
+
+    for word in scroll_actions:
+        if unclean_data.find(word) != -1:
+            entity = "Scroll Action"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+
+    for word in enter_actions:
+        if unclean_data.find(word) != -1:
+            entity = "Enter Action"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+
+    for word in open_actions:
+        if unclean_data.find(word) != -1:
+            entity = "Open Action"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+
+    isRecognized = False
+    for word in unnecessary_word_app_names:
+        if unclean_data.find(word) != -1:
+            entity = "Unnecessary App"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+            isRecognized = True
+
+    for word in multi_word_apps:
+        if unclean_data.find(word) != -1:
+            entity = "Multi Word Name"
+            data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+            isRecognized = True
+
+    if isRecognized is False:
+        for word in faulty_app_names:
+            if unclean_data.find(word) != -1:
+                entity = "Faulty App Name"
+                data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+                isRecognized = True
+
+    if isRecognized is False:
+        for word in normal_app_names:
+            if unclean_data.find(word) != -1:
+                entity = "Normal App Name"
+                data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
+                isRecognized = True
+
+    for word in plurals:
+        if unclean_data.find(word) != -1:
+            entity = "Plural"
+            data.append((entity, unclean_data.find(word), unclean_data.find(word) + len(word)))
+
+    for word in items:
+        if unclean_data.find(word) != -1:
+            entity = "Item"
+            data.append((entity, unclean_data.find(word), unclean_data.find(word) + len(word)))
+
+    for word in locations:
+        if unclean_data.find(word) != -1:
+            entity = "Location"
+            data.append((entity, unclean_data.find(word), unclean_data.find(word) + len(word)))
+
+    for word in conjunctions:
+        if unclean_data.find(word) != -1:
+            entity = "Conjunction"
+            data.append((entity, unclean_data.find(word), unclean_data.find(word) + len(word)))
+
+    return data
 
 
 def clean_data(unclean_data):
@@ -364,7 +448,7 @@ def clean_data(unclean_data):
         if entity == '':
             for word4 in enter_actions:
                 word4 = word4.lower()
-                if word4 == word4:
+                if word == word4:
                     entity = "Enter Action"
                     check4 = True
 
@@ -387,7 +471,7 @@ def clean_data(unclean_data):
         if entity == '':
             for word7 in faulty_app_names:
                 word7 = word7.lower()
-                if word7 == word7:
+                if word == word7:
                     entity = "Ambiguous App Name"
                     check7 = True
 
@@ -416,7 +500,7 @@ def clean_data(unclean_data):
                     check10 = True
         check11 = False
         if entity == '':
-            for word11 in item:
+            for word11 in items:
                 word11 = word11.lower()
                 if word == word11:
                     entity = "Item"
@@ -424,7 +508,7 @@ def clean_data(unclean_data):
 
         check12 = False
         if entity == '':
-            for word12 in booleans:
+            for word12 in conjunctions:
                 word12 = word12.lower()
                 if word == word12:
                     entity = "Boolean"
@@ -470,3 +554,4 @@ if __name__ == '__main__':
     for commands in dataset:
         entity_analysis(commands, file)
     file.close()
+    # clean_data2('click cinemas from the Swiggy')
