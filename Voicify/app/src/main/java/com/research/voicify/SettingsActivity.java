@@ -16,26 +16,26 @@ import java.util.Set;
 public class SettingsActivity extends AppCompatActivity   implements
         AdapterView.OnItemSelectedListener{
 
-    String tooltipColor = "";
-    String tooltipOpacity = "";
-    String tooltipSize = "";
-    String buttonOpacity = "";
-    String buttonRecordTxt = "";
+    int tooltipColor = 0;
+    int tooltipOpacity = 0;
+    int tooltipSize = 0;
+    int buttonOpacity = 0;
+    int buttonRecordTxt = 0;
 
-    String[] tooltipColorSpinnerItems = new String[]{"black","red","blue"};
-    String[] tooltipOpacitySpinnerItems = new String[]{"25%","50%", "75%","100%"};
-    String[] tooltipSizeSpinnerItems = new String[]{"small","medium", "large"};
-    String[] buttonOpacitySpinnerItems = new String[]{"small","medium", "large"};
-    String[] buttonRecordItems = new String[]{"show","hide"};
+    static final String[] tooltipColorSpinnerItems = new String[]{"blue","black","red"};
+    static final String[] tooltipOpacitySpinnerItems = new String[]{"100%","75%", "50%","25%"};
+    static final String[] tooltipSizeSpinnerItems = new String[]{"small","medium", "large"};
+    static final String[] buttonOpacitySpinnerItems = new String[]{"100%","75%", "50%","25%"};
+    static final String[] buttonRecordItems = new String[]{"hide","show"};
 
 
     SharedPreferences sharedPreferences;
-    final String FILE_NAME = "voicify";
-    final String BUTTON_OPACITY = "btn_opacity";
-    final String BUTTON_RECORD = "btn_record";
-    final String TOOLTIP_COLOR = "tooltip_color";
-    final String TOOLTIP_SIZE = "tooltip_size";
-    final String TOOLTIP_OPACITY = "tooltip_opacity";
+    static final String FILE_NAME = "voicify";
+    static final String BUTTON_OPACITY = "btn_opacity";
+    static final String BUTTON_RECORD = "btn_record";
+    static final String TOOLTIP_COLOR = "tooltip_color";
+    static final String TOOLTIP_SIZE = "tooltip_size";
+    static final String TOOLTIP_OPACITY = "tooltip_opacity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,48 +44,53 @@ public class SettingsActivity extends AppCompatActivity   implements
 
         sharedPreferences = getSharedPreferences(FILE_NAME,0);
 
-        tooltipColor = sharedPreferences.getString(TOOLTIP_COLOR,tooltipColorSpinnerItems[0]);
-        tooltipOpacity = sharedPreferences.getString(TOOLTIP_OPACITY,tooltipOpacitySpinnerItems[0]);
-        tooltipSize = sharedPreferences.getString(TOOLTIP_SIZE,tooltipSizeSpinnerItems[0]);
-        buttonOpacity = sharedPreferences.getString(BUTTON_OPACITY,buttonOpacitySpinnerItems[0]);
-        buttonRecordTxt = sharedPreferences.getString(BUTTON_RECORD,buttonRecordItems[0]);
+        tooltipColor = sharedPreferences.getInt(TOOLTIP_COLOR,0);
+        tooltipOpacity = sharedPreferences.getInt(TOOLTIP_OPACITY,0);
+        tooltipSize = sharedPreferences.getInt(TOOLTIP_SIZE,0);
+        buttonOpacity = sharedPreferences.getInt(BUTTON_OPACITY,0);
+        buttonRecordTxt = sharedPreferences.getInt(BUTTON_RECORD,0);
 
         SharedPreferences.Editor editor = sharedPreferences.edit();         // call an editor to modify SF
 
         Spinner tooltipColorSpinner = findViewById(R.id.tooltip_color);
-          ArrayAdapter<String> tooltipColorAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, tooltipColorSpinnerItems);
+        ArrayAdapter<String> tooltipColorAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, tooltipColorSpinnerItems);
         tooltipColorSpinner.setAdapter(tooltipColorAdapter);
         tooltipColorSpinner.setOnItemSelectedListener(this);
+        tooltipColorSpinner.setSelection(tooltipColor);
 
         Spinner tooltipOpacitySpinner = findViewById(R.id.tooltip_opacity);
         ArrayAdapter<String> tooltipOpacityAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, tooltipOpacitySpinnerItems);
         tooltipOpacitySpinner.setAdapter(tooltipOpacityAdapter);
         tooltipOpacitySpinner.setOnItemSelectedListener(this);
+        tooltipOpacitySpinner.setSelection(tooltipOpacity);
 
         Spinner tooltipSizeSpinner = findViewById(R.id.tooltip_size);
         ArrayAdapter<String> tooltipSizeAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, tooltipSizeSpinnerItems);
         tooltipSizeSpinner.setAdapter(tooltipSizeAdapter);
         tooltipSizeSpinner.setOnItemSelectedListener(this);
+        tooltipSizeSpinner.setSelection(tooltipSize);
 
         Spinner buttonOpacitySpinner = findViewById(R.id.button_opacity);
         ArrayAdapter<String> buttonOpacityAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, buttonOpacitySpinnerItems);
         buttonOpacitySpinner.setAdapter(buttonOpacityAdapter);
         buttonOpacitySpinner.setOnItemSelectedListener(this);
+        buttonOpacitySpinner.setSelection(buttonOpacity);
 
         Spinner buttonRecord = findViewById(R.id.button_record);
         ArrayAdapter<String> buttonRecordAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, buttonRecordItems);
         buttonRecord.setAdapter(buttonRecordAdapter);
         buttonRecord.setOnItemSelectedListener(this);
+        buttonRecord.setSelection(buttonRecordTxt);
 
         Button saveBtn = findViewById(R.id.button3);
         saveBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                editor.putString(BUTTON_OPACITY,buttonOpacity);
-                editor.putString(BUTTON_RECORD,buttonRecordTxt);
-                editor.putString(TOOLTIP_COLOR,tooltipColor);
-                editor.putString(TOOLTIP_SIZE,tooltipSize);
-                editor.putString(TOOLTIP_OPACITY,tooltipOpacity);
+                editor.putInt(BUTTON_OPACITY,buttonOpacity);
+                editor.putInt(BUTTON_RECORD,buttonRecordTxt);
+                editor.putInt(TOOLTIP_COLOR,tooltipColor);
+                editor.putInt(TOOLTIP_SIZE,tooltipSize);
+                editor.putInt(TOOLTIP_OPACITY,tooltipOpacity);
                 editor.apply();
                 Intent myIntent = new Intent(SettingsActivity.this, MainActivity.class);
                 startActivity(myIntent);
@@ -101,23 +106,23 @@ public class SettingsActivity extends AppCompatActivity   implements
         Spinner spinner = (Spinner) parent;
         if(spinner.getId() == R.id.tooltip_color)
         {
-            tooltipColor = tooltipColorSpinnerItems[position];
+            tooltipColor = position;
         }
         else if(spinner.getId() == R.id.tooltip_opacity)
         {
-            tooltipOpacity =  tooltipOpacitySpinnerItems[position];
+            tooltipOpacity =  position;
         }
         else if(spinner.getId() == R.id.tooltip_size)
         {
-            tooltipSize =  tooltipSizeSpinnerItems[position];
+            tooltipSize =  position;
         }
         else if(spinner.getId() == R.id.button_opacity)
         {
-            buttonOpacity =  buttonOpacitySpinnerItems[position];
+            buttonOpacity =  position;
         }
         else if(spinner.getId() == R.id.button_record)
         {
-            buttonRecordTxt =  buttonRecordItems[position];
+            buttonRecordTxt =  position;
         }
 
     }
@@ -128,23 +133,23 @@ public class SettingsActivity extends AppCompatActivity   implements
         Spinner spinner = (Spinner) parent;
         if(spinner.getId() == R.id.tooltip_color)
         {
-            tooltipColor = tooltipColorSpinnerItems[0];
+            tooltipColor = 0;
         }
         else if(spinner.getId() == R.id.tooltip_opacity)
         {
-            tooltipOpacity =  tooltipOpacitySpinnerItems[0];
+            tooltipOpacity =  0;
         }
         else if(spinner.getId() == R.id.tooltip_size)
         {
-            tooltipSize =  tooltipSizeSpinnerItems[0];
+            tooltipSize =  0;
         }
         else if(spinner.getId() == R.id.button_opacity)
         {
-            buttonOpacity =  buttonOpacitySpinnerItems[0];
+            buttonOpacity =  0;
         }
         else if(spinner.getId() == R.id.button_record)
         {
-            buttonRecordTxt =  buttonRecordItems[0];
+            buttonRecordTxt = 0;
         }
     }
 }
