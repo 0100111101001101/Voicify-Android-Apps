@@ -59,6 +59,11 @@
             android:label="DeepLinkList"
             >
         </activity>
+        <activity
+            android:name=".SettingsActivity"
+            android:label="SettingsActivity"
+            >
+        </activity>
         <service
             android:name=".VoiceToActionService"
             android:accessibilityFeedbackType="feedbackGeneric"

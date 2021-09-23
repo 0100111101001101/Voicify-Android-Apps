@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     // NOTE: UI View outlets below here
     EditText speechTextOutlet;
     Button listenBtn;
+    Button settingBtn;
     Switch ttsToggle;
     Button deepLink;
     // NOTE: Global Variables below here
@@ -79,6 +80,15 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Log.d(debugLogTag, "start");
                 speechRecognizer.startListening(speechRecognizerIntent);       // on click listener to start listening audio
+            }
+
+        });
+        settingBtn = findViewById(R.id.buttonsetting);
+        settingBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent myIntent = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivity(myIntent);
             }
 
         });

@@ -96,7 +96,7 @@ public class VoiceToActionService extends AccessibilityService {
 
     ArrayList<String> savedCommands = new ArrayList<>();
 
-    private int currentTooltipCount = 0;
+    private int currentTooltipCount = 1;
     boolean isRecording = false;
     boolean isPlaying = false;
     @Override
@@ -408,7 +408,7 @@ public class VoiceToActionService extends AccessibilityService {
                 wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
         }
         // reset all variables when changing to new screen.
-        currentTooltipCount = 0;
+        currentTooltipCount = 1;
         tooltipRequiredNodes.clear();
         foundLabeledNodes.clear();
     }
