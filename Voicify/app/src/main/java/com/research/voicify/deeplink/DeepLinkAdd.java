@@ -28,10 +28,19 @@ public class DeepLinkAdd extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.add_link);
-
+        Intent intent = getIntent();
         commandTxt = findViewById(R.id.commandTxt);
         step1 = findViewById(R.id.step1);
+
+
         sharedPreferences = getSharedPreferences(FILE_NAME,0);      // open the SF that is used in this app
+
+        String title = intent.getStringExtra("currentItem");
+        if(title != null){
+            commandTxt.setText(title);
+            step1.setText(sharedPreferences.getString(title,""));
+        }
+
         SharedPreferences.Editor editor = sharedPreferences.edit();         // call an editor to modify SF
         Set<String> defaultSet = new HashSet<String>();
         Set<String> fetchedCommandSet = sharedPreferences.getStringSet(ALL_COMMANDS,defaultSet);

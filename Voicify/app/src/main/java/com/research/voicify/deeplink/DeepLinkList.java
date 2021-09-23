@@ -50,10 +50,17 @@ public class DeepLinkList extends AppCompatActivity {
             }
         }
 
-        adapter = new DeepLinkRecyclerAdapter(allDeepLinkItems, new ClickListener() {
+        adapter = new DeepLinkRecyclerAdapter(allDeepLinkItems, new DeepLinkRecyclerAdapter.MyClickListener() {
             @Override
-            public void onPositionClicked(int position) {   // implement the delete button for items
-                DeepLinkItem item = allDeepLinkItems.remove(position);
+            public void onEdit(int p) {
+                Intent myIntent = new Intent(DeepLinkList.this, DeepLinkAdd.class);
+                myIntent.putExtra("currentItem",allDeepLinkItems.get(p).title);
+                startActivity(myIntent);
+            }
+
+            @Override
+            public void onDelete(int p) {
+                DeepLinkItem item = allDeepLinkItems.remove(p);
                 SharedPreferences.Editor editor = sharedPreferences.edit();     // use the editor to change the data inside shared prefs
                 editor.remove(item.title);
                 fetchedCommandSet.remove(item.title);           // remove the deep link
@@ -69,7 +76,6 @@ public class DeepLinkList extends AppCompatActivity {
         addBtn.setOnClickListener(new View.OnClickListener() {      // implement the "add" button, go to the new activity.
             @Override
             public void onClick(View v) {
-
                 Intent myIntent = new Intent(DeepLinkList.this, DeepLinkAdd.class);
                 startActivity(myIntent);
             }

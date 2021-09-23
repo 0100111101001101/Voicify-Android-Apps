@@ -30,6 +30,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,13 +43,15 @@ import com.research.voicify.elements.TooltipRequiredNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
-
+import java.util.Calendar;
 
 /**
  * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
@@ -76,7 +79,8 @@ public class VoiceToActionService extends AccessibilityService {
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
-
+    WindowManager wm;
+    long currentTime;
     //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
     private static final Map<String,String> speechPrompt=new HashMap<String,String>();
     static {
@@ -108,11 +112,24 @@ public class VoiceToActionService extends AccessibilityService {
         if (source == null) {
             return;
         }
+        if(isNotBlockedEvent()) {
+            removeAllTooltips();    // remove all old  tooltip when screen changed
+            currentSource = getRootInActiveWindow(); // update the current root node
+            printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+            autoExecutePredefinedCommand();
+        }
 
-        removeAllTooltips();    // remove all old  tooltip when screen changed
-        currentSource = getRootInActiveWindow(); // update the current root node
-        printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
-        autoExecutePredefinedCommand();
+    }
+
+    public boolean isNotBlockedEvent(){
+        Date date = new Date();
+        long time = date.getTime();
+        if (time - currentTime > 500){
+            currentTime = time;
+            return true;
+        }
+        Log.d(debugLogTag, "Event blocked for repetitive calls");
+        return false;
     }
 
     public void autoExecutePredefinedCommand(){
@@ -171,7 +188,7 @@ public class VoiceToActionService extends AccessibilityService {
                         nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
                          if(rectTest.right < width && rectTest.bottom<height){
                             Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
-                            inflateTooltip(rectTest.right, rectTest.top, nodeInfo);    // call function to create number tooltips
+                            inflateTooltip((rectTest.right+rectTest.left)/2, rectTest.top, nodeInfo);    // call function to create number tooltips
 
                         }
                     }
@@ -301,7 +318,9 @@ public class VoiceToActionService extends AccessibilityService {
         * */
 
         super.onServiceConnected();
-
+        wm  = (WindowManager) getSystemService(WINDOW_SERVICE);
+        Date date = new Date();
+        currentTime = date.getTime();
         createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
@@ -333,7 +352,6 @@ public class VoiceToActionService extends AccessibilityService {
          * connected and will be gone when service is shutdown
          *
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE); //
         mLayout = new FrameLayout(this);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
@@ -348,6 +366,7 @@ public class VoiceToActionService extends AccessibilityService {
         wm.addView(mLayout, lp);       // add it to the screen
     }
 
+
     private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
         /**
          * This function will configure each of the tooltip on the screen, so this function will be
@@ -355,7 +374,7 @@ public class VoiceToActionService extends AccessibilityService {
          * param: x is the location in x axis
          * param: y is the location in y axis
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);    // window manager
+          // window manager
         FrameLayout tooltipLayout = new FrameLayout(this);      // create new layout for each tooltip
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
@@ -384,7 +403,6 @@ public class VoiceToActionService extends AccessibilityService {
          * This function will be called when something changed on the screen, reset all tooltips.
          *
          */
-        WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         for (TooltipRequiredNode tooltip: tooltipRequiredNodes){    // remove the list of current tooltips
             if(tooltip.tooltipLayout != null)
                 wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
@@ -435,6 +453,19 @@ public class VoiceToActionService extends AccessibilityService {
                 } else {
                     listenBtn.setText("Record");
                     isRecording = false;
+                    if (savedCommands.size() >0){
+                        String commands = "";
+                        for(String command: savedCommands){
+                            commands += command + ";";
+                        }
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        predefinedCommands.add("new command");
+                        Set<String> newCommands = new HashSet<>(predefinedCommands);
+                        editor.putStringSet(ALL_COMMANDS,newCommands);
+                        editor.putString("new command",commands);
+                        editor.apply();
+                    }
+
                     Log.d(debugLogTag," " + savedCommands.size());
                     Log.d(debugLogTag," " + savedCommands);
                 }
@@ -448,7 +479,7 @@ public class VoiceToActionService extends AccessibilityService {
             @Override
             public void onClick(View view) {
 
-              commandExecution("find nearest mcdonald");
+              commandExecution("new command");
 
             }
         });
@@ -568,6 +599,13 @@ public class VoiceToActionService extends AccessibilityService {
         startService(i);
     }
 
+    public void findNearbyMapDeepLink(String location){
+        Uri gmmIntentUri = Uri.parse("geo:0,0?q="+location);
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+        mapIntent.setPackage("com.google.android.apps.maps");
+        startActivity(mapIntent);
+    }
+
     boolean clickButtonByText(String word) {
         /**
          * This function will click a button (anything thats clickable) with provided information
@@ -629,6 +667,7 @@ public class VoiceToActionService extends AccessibilityService {
 
         if(predefinedCommands.contains(match.toLowerCase())){
             String commands  = sharedPreferences.getString(match,null);
+            currentSequence.clear();
             Collections.addAll(currentSequence, commands.split(";"));
             if(currentSequence.size() == 0){
                 Log.d(debugLogTag,"no more item to press");

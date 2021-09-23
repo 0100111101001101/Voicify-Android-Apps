@@ -17,7 +17,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 public class DeepLinkRecyclerAdapter extends RecyclerView.Adapter<DeepLinkRecyclerAdapter.ViewHolder> {
-    private final ClickListener listener;
+    private final MyClickListener listener;
     ArrayList<DeepLinkItem> data = new ArrayList<>();
 
     /**
@@ -25,7 +25,7 @@ public class DeepLinkRecyclerAdapter extends RecyclerView.Adapter<DeepLinkRecycl
      * @param data : the initialized data for the list
      * @param listener : onclick listener
      */
-    public DeepLinkRecyclerAdapter(ArrayList<DeepLinkItem> data,ClickListener listener) {
+    public DeepLinkRecyclerAdapter(ArrayList<DeepLinkItem> data,MyClickListener listener) {
         this.data = data;
         this.listener = listener;
     }
@@ -34,8 +34,7 @@ public class DeepLinkRecyclerAdapter extends RecyclerView.Adapter<DeepLinkRecycl
     @Override
     public DeepLinkRecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.deeplink_item, parent, false);
-        ViewHolder viewHolder = new ViewHolder(v);
-        return viewHolder;  // this function create and return a view holder
+        return new ViewHolder(v, listener);  // this function create and return a view holder
     }
 
 
@@ -77,20 +76,35 @@ public class DeepLinkRecyclerAdapter extends RecyclerView.Adapter<DeepLinkRecycl
         public TextView title;
         public TextView commands;
         public ImageButton deleteBtn;
-        private WeakReference<ClickListener> listenerRef;
-        public ViewHolder(@NonNull View itemView) {
+
+        MyClickListener listener;
+
+        public ViewHolder(@NonNull View itemView, MyClickListener listener) {
             super(itemView);
-            listenerRef = new WeakReference<>(listener);
+            this.listener = listener;
+
             title = itemView.findViewById(R.id.itemTitle);
             commands = itemView.findViewById(R.id.itemCommand);
             deleteBtn = itemView.findViewById(R.id.deleteBtn);
-
+            title.setOnClickListener(this);
             deleteBtn.setOnClickListener(this);
         }
         @Override
-        public void onClick(View v) {
-
-            listenerRef.get().onPositionClicked(getAdapterPosition());  // call on click function
+        public void onClick(View view) {
+            switch (view.getId()) {
+                case R.id.itemTitle:
+                    listener.onEdit(this.getLayoutPosition());
+                    break;
+                case R.id.deleteBtn:
+                    listener.onDelete(this.getLayoutPosition());
+                    break;
+                default:
+                    break;
+            }
         }
+    }
+    public interface MyClickListener {
+        void onEdit(int p);
+        void onDelete(int p);
     }
 }
