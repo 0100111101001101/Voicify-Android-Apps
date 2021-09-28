@@ -387,7 +387,7 @@ public class VoiceToActionService extends AccessibilityService {
         lp.gravity = Gravity.TOP ;  // stick it to the top
         lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
         lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
-
+        lp.y = 150;
 
 
         LayoutInflater inflater = LayoutInflater.from(this);
