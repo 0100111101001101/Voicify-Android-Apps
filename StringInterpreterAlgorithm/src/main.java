@@ -71,7 +71,7 @@ class Main {
     @post-cond: adds all the synonyms for actions enum in the global variable
                 (Key: Action enum, Value: Synonyms of action)
     */
-    private static void fetchSynonyms(){
+    public static void fetchSynonyms(){
         ArrayList<String> clickSynonyms = new ArrayList<String>(Arrays.asList("tap","touch","press"));
         ArrayList<String> scrollSynonyms = new ArrayList<String>(Arrays.asList("swipe","move","go"));
         ArrayList<String> openSynonyms = new ArrayList<String>(Arrays.asList("launch","start","execute"));
@@ -93,7 +93,7 @@ class Main {
      @param: String Array containing UI elements on screen
      @Returns: Hashmap with potential targets where key is the cleaned string and value is the original string
      */
-    private static HashMap<String,String> processTargets(String[] uiElements){
+    public static HashMap<String,String> processTargets(String[] uiElements){
         HashMap<String,String> targets = new HashMap<String,String>(); // initialising the array of all available elements
 
         // adding all the cleaned data to the available targets array
@@ -116,7 +116,7 @@ class Main {
      @Returns: Hashmap where KEY is an ACTION keyword, and the VALUE is an ArrayList containing the 'target' string,
      * which is the application name to have the action performed on
      */
-    private static HashMap<Action,ArrayList<String>> getActionTargetMap() {
+    public static HashMap<Action,ArrayList<String>> getActionTargetMap() {
         HashMap<Action,ArrayList<String>> matches = new HashMap<Action,ArrayList<String>>();
         // Loop through each actionTargetRangeList element. key: Action, value: string
         for (HashMap<Action,String> actionRangePair : actionTargetRangeList) {
@@ -160,7 +160,7 @@ class Main {
      * @return True if inputs are matching singular/plural of eachother, otherwise returns false
      * TODO: Does not seem to work 100% correct, you can pass two strings of similar length and it will still reutrn true e.g. "map" and "masp"
      */
-    private static boolean isSingularPlural(String str1, String str2) {
+    public static boolean isSingularPlural(String str1, String str2) {
         int characterChangeThreshold = 2 - (Math.abs(str1.length() - str2.length()));
         int maxComparableLen = str1.length() < str2.length() ? str1.length() : str2.length();
         boolean contiguousChange = false;
@@ -203,7 +203,7 @@ class Main {
      * arraylist value, which contains the start and ending index of action word inside command string e.g. [34,40]
      * Example output: {OPEN={1=[49, 55]}}
     */
-    private static HashMap<Action,HashMap<Integer,ArrayList<Integer>>> getActionTriggers(String command) {
+    public static HashMap<Action,HashMap<Integer,ArrayList<Integer>>> getActionTriggers(String command) {
         HashMap<Action,HashMap<Integer,ArrayList<Integer>>> actions = new HashMap<Action,HashMap<Integer,ArrayList<Integer>>>();
         actionTargetRangeList = new ArrayList<HashMap<Action, String>>();
         String currentWord = "";
@@ -252,10 +252,11 @@ class Main {
      * @param word string to be looked up to determine if it is a 'trigger' word is used which may be a synonym
      * @return string - action keyword that corresponds to the string (which may be a synonym) if it exists, otherwise returns the original input
      */
-    private static String isTriggerWord(String word) {
+    public static String isTriggerWord(String word) {
+        word.toUpperCase();
         for (Action action : actionSynonyms.keySet()) {
             for (String synonym : actionSynonyms.get(action)) {
-                if (word.equals(synonym)) {
+                if (word.equals(synonym.toUpperCase())) {
                     return action.toString();
                 }
             }
@@ -271,7 +272,7 @@ class Main {
      * @param word string to be looked up to determine if it is a 'action' word
      * @return Boolean
      */
-    private static boolean isAction(String word) {
+    public static boolean isAction(String word) {
         try {
             Action.valueOf(word.toUpperCase());
             return true;
@@ -289,7 +290,7 @@ class Main {
      *                 index of the last character of the ACTION keyword that prepends the string
      * @return String containing up to 51 character substring starting from the position specified in the input parameter
      */
-    private static String getMaxTargetString(String command, Integer position){
+    public static String getMaxTargetString(String command, Integer position){
         int maxIndex = (position+51 < command.length()) ? position+51 : command.length();
         return command.substring(position+1,maxIndex);
     }
@@ -337,7 +338,7 @@ class Main {
     @return: It returns a string that is cleaned.
     */
     // TODO: CONSIDER ADDING NULL HANDLING TO IMPROVE ROBUSTNESS
-    private static String cleanElements(String command){
+    public static String cleanElements(String command){
         ArrayList<String> articles = new ArrayList<String>(Arrays.asList("a","an","the")); // defining the 3 articles in english
         command = command.toLowerCase().trim();
         command = command.replaceAll("[^a-zA-Z0-9 ]", "");        // replaces characters not in regex
@@ -449,7 +450,7 @@ class Main {
         System.out.println(cleanElements(String7));
         System.out.println(cleanElements(String8));
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // Tests for processTargets()
 
         // appNames from above, used for reference
@@ -467,14 +468,97 @@ class Main {
         //System.out.println(processTargets(uiElements3)); // Pass null array *breaks*
         System.out.println(processTargets(uiElements4));
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // Tests for isSingularPlural()
 
         System.out.println(isSingularPlural("maps","map"));
         System.out.println(isSingularPlural("google maps","google map"));
-        System.out.println(isSingularPlural("google maps","google map"));
+        System.out.println(isSingularPlural("Youtube","Youtubes"));
+        System.out.println(isSingularPlural("cats","dogs"));
+        System.out.println(isSingularPlural("Google Maps","Google Rewards"));
+        System.out.println(isSingularPlural("",""));
+        System.out.println(isSingularPlural(""," "));
+        //System.out.println(isSingularPlural("",null));
+        System.out.println(isSingularPlural("maps"," "));
 
 
+        // Tests for isTriggerWord()
+        System.out.println(isTriggerWord("maps"));  // Not a valid Trigger word, should return the original string
+        System.out.println(isTriggerWord(""));      // Empty string, should return empty string
+        //System.out.println(isTriggerWord(null));  // null input, should handle error
+        // Testing CLICK action synonyms
+        System.out.println(isTriggerWord("tap"));       //valid action, should return CLICK
+        System.out.println(isTriggerWord("tAp"));       //valid action, should return CLICK
+        System.out.println(isTriggerWord("toUch"));     //valid action, should return CLICK
+        System.out.println(isTriggerWord("press"));     //valid action, should return CLICK
+        System.out.println(isTriggerWord("click"));     //valid action, should return CLICK
+        // Testing SCROLL action synonyms
+        System.out.println(isTriggerWord("swipe"));     //valid action, should return SCROLL
+        System.out.println(isTriggerWord("move"));      //valid action, should return SCROLL
+        System.out.println(isTriggerWord("go"));        //valid action, should return SCROLL
+        System.out.println(isTriggerWord("SCROLL"));    //valid action, should return SCROLL
+        // Testing OPEN action synonyms
+        System.out.println(isTriggerWord("launch"));    //valid action, should return OPEN
+        System.out.println(isTriggerWord("start"));     //valid action, should return OPEN
+        System.out.println(isTriggerWord("execute"));   //valid action, should return OPEN
+        System.out.println(isTriggerWord("oPeN"));      //valid action, should return OPEN
+        // Testing ENTER action synonyms
+        System.out.println(isTriggerWord("fill"));      //valid action, should return ENTER
+        System.out.println(isTriggerWord("search"));    //valid action, should return ENTER
+        System.out.println(isTriggerWord("type"));      //valid action, should return ENTER
+        System.out.println(isTriggerWord("ENTER"));     //valid action, should return ENTER
+        System.out.println(isTriggerWord("ENTER!"));    // Invalid action should return original string
+
+        // Tests for isAction()
+        System.out.println(isAction("tap"));        //valid action, should return FALSE
+        System.out.println(isAction("tAp"));        //valid action, should return FALSE
+        System.out.println(isAction("click"));      //valid action, should return TRUE
+        System.out.println(isAction("CLIcK"));      //valid action, should return TRUE
+        System.out.println(isAction("ScRoll"));     //valid action, should return TRUE
+        System.out.println(isAction("ScRoll"));         //valid action, should return TRUE
+        System.out.println(isAction("OPEn"));       //valid action, should return TRUE
+        System.out.println(isAction("OPEn!"));      //valid action, should return FALSE
+        System.out.println(isAction("Enter"));      //valid action, should return TRUE
+        System.out.println(isAction("Enter"));      //valid action, should return TRUE
+
+        // Tests for getMaxTargetString(String command, Integer position)
+        System.out.println(getMaxTargetString("launch smart launcher we google about the proposal",6)); //valid, should return "smart launcher we google about the proposal"
+        System.out.println(getMaxTargetString("hello open youtube music",10));  //valid, should return "youtube music"
+        System.out.println(getMaxTargetString("scroll down the page and only retrieve up to 51 characters as that is the maximum allowed length in the app store",6)); //valid, should return "down the page and only retrieve up to 51 character"
+        //System.out.println(getMaxTargetString("",6)); // invalid, should handle errors or fail gracefully
+        //System.out.println(getMaxTargetString("launch smart launcher we google about the proposal",-5)); //invalid, should handle errors or fail gracefully
+        //System.out.println(getMaxTargetString("click on facebook",20)); //invalid, should handle errors or fail gracefully
+
+        // Tests for getActionTriggers(String command)
+        System.out.println(getActionTriggers("launch smart launcher we google about the proposal")); //valid, should return {OPEN={1=[0, 6]}}
+        System.out.println(getActionTriggers("ok google click youtube and then tap home")); //valid uses of CLICK including synonym handling, should return {CLICK={1=[10, 15], 2=[33, 36]}}
+        System.out.println(getActionTriggers("hey google, scroll down and tap chrome")); //valid uses of SCROLL and CLICk, should return {SCROLL={1=[12, 18]}, CLICK={1=[28, 31]}}
+        System.out.println(getActionTriggers("TESTINGTAP tap Click touch press ebay")); //valid uses of SCROLL and CLICk, should return {CLICK={1=[11, 14], 2=[15, 20], 3=[21, 26], 4=[27, 32]}}
+        System.out.println(getActionTriggers("SWIPE swipe move Go")); //valid uses of SCROLL SYNONYMS, should return {SCROLL={1=[6, 11], 2=[12, 16]}}
+        System.out.println(getActionTriggers("launch eXEcute start OPEN settings"));    //valid uses of OPEN SYNONYMS, {OPEN={1=[0, 6], 2=[15, 20], 3=[21, 25]}}
+        System.out.println(getActionTriggers("ENTER type search fill username"));       //valid uses of ENTER SYNONYMS,{ENTER={1=[0, 5], 2=[6, 10], 3=[11, 17], 4=[18, 22]}}
+        System.out.println(getActionTriggers("hello this message is empty")); //valid, although no Action words used, should return {}
+        System.out.println(getActionTriggers("")); //valid, empty string, should return {}
+
+        // Tests for getActionTargetMap()
+
+        System.out.println(getActionTriggers("ok google click youtube and then home")); //valid uses of CLICK and target (youtube), should return {CLICK=[Youtube]}
+        System.out.println(getActionTargetMap());
+
+        System.out.println(getActionTriggers("hey google launch facebook")); //valid uses of OPEN synonym (launch) and target (facebook), should return {OPEN=[Facebook]}
+        System.out.println(getActionTargetMap());
+
+        System.out.println(getActionTriggers("hey google")); //valid, no actions or targets ,should return empty set {}
+        System.out.println(getActionTargetMap());
+
+        System.out.println(getActionTriggers("scroll down please")); // valid uses of SCROLL, no target selected as it is not an app. Returns {SCROLL=[]}
+        System.out.println(getActionTargetMap());
+
+        System.out.println(getActionTriggers("hello search youtube")); //valid uses of ENTER synonym (search) and target (youtube), should return {ENTER=[Youtube]}
+        System.out.println(getActionTargetMap());
+
+        System.out.println(getActionTriggers("")); //Empty action list, should return empty dataset {}
+        System.out.println(getActionTargetMap());
     }
 
 }
