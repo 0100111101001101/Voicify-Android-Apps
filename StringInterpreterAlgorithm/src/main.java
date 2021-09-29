@@ -139,8 +139,8 @@ class Main {
             }
 
             matches.put(currentAction,new ArrayList<String>(targets));
-            System.out.println("\n"+currentAction);
-            System.out.println(matches.get(currentAction));
+            //System.out.println("\n"+currentAction);
+            //System.out.println(matches.get(currentAction));
         }
 
         return matches;
@@ -253,10 +253,10 @@ class Main {
      * @return string - action keyword that corresponds to the string (which may be a synonym) if it exists, otherwise returns the original input
      */
     public static String isTriggerWord(String word) {
-        word.toUpperCase();
+        String wordLookup = word.toUpperCase();
         for (Action action : actionSynonyms.keySet()) {
             for (String synonym : actionSynonyms.get(action)) {
-                if (word.equals(synonym.toUpperCase())) {
+                if (wordLookup.equals(synonym.toUpperCase()) || wordLookup.equals(action.toString())) {
                     return action.toString();
                 }
             }
@@ -534,7 +534,7 @@ class Main {
         System.out.println(getActionTriggers("ok google click youtube and then tap home")); //valid uses of CLICK including synonym handling, should return {CLICK={1=[10, 15], 2=[33, 36]}}
         System.out.println(getActionTriggers("hey google, scroll down and tap chrome")); //valid uses of SCROLL and CLICk, should return {SCROLL={1=[12, 18]}, CLICK={1=[28, 31]}}
         System.out.println(getActionTriggers("TESTINGTAP tap Click touch press ebay")); //valid uses of SCROLL and CLICk, should return {CLICK={1=[11, 14], 2=[15, 20], 3=[21, 26], 4=[27, 32]}}
-        System.out.println(getActionTriggers("SWIPE swipe move Go")); //valid uses of SCROLL SYNONYMS, should return {SCROLL={1=[6, 11], 2=[12, 16]}}
+        System.out.println(getActionTriggers("SWIPE swipe move Go home")); //valid uses of SCROLL SYNONYMS, should return {SCROLL={1=[0, 5], 2=[6, 11], 3=[12, 16], 4=[17, 19]}}
         System.out.println(getActionTriggers("launch eXEcute start OPEN settings"));    //valid uses of OPEN SYNONYMS, {OPEN={1=[0, 6], 2=[15, 20], 3=[21, 25]}}
         System.out.println(getActionTriggers("ENTER type search fill username"));       //valid uses of ENTER SYNONYMS,{ENTER={1=[0, 5], 2=[6, 10], 3=[11, 17], 4=[18, 22]}}
         System.out.println(getActionTriggers("hello this message is empty")); //valid, although no Action words used, should return {}
@@ -543,22 +543,22 @@ class Main {
         // Tests for getActionTargetMap()
 
         System.out.println(getActionTriggers("ok google click youtube and then home")); //valid uses of CLICK and target (youtube), should return {CLICK=[Youtube]}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
 
         System.out.println(getActionTriggers("hey google launch facebook")); //valid uses of OPEN synonym (launch) and target (facebook), should return {OPEN=[Facebook]}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
 
         System.out.println(getActionTriggers("hey google")); //valid, no actions or targets ,should return empty set {}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
 
         System.out.println(getActionTriggers("scroll down please")); // valid uses of SCROLL, no target selected as it is not an app. Returns {SCROLL=[]}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
 
         System.out.println(getActionTriggers("hello search youtube")); //valid uses of ENTER synonym (search) and target (youtube), should return {ENTER=[Youtube]}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
 
         System.out.println(getActionTriggers("")); //Empty action list, should return empty dataset {}
-        System.out.println(getActionTargetMap());
+        System.out.println("Matches: " + getActionTargetMap());
     }
 
 }
