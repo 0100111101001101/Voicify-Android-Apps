@@ -24,6 +24,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -61,7 +62,7 @@ import java.util.Calendar;
 
 
 @RequiresApi(api = Build.VERSION_CODES.R)
-public class VoiceToActionService extends AccessibilityService {
+public class VoiceToActionService extends AccessibilityService implements View.OnTouchListener {
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
     int width,height;
@@ -99,6 +100,14 @@ public class VoiceToActionService extends AccessibilityService {
     private int currentTooltipCount = 0;
     boolean isRecording = false;
     boolean isPlaying = false;
+    private float dX1;
+    private float dY1;
+    private float dX2;
+    private float dY2;
+    private float dX3;
+    private float dY3;
+
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         /**
@@ -357,14 +366,31 @@ public class VoiceToActionService extends AccessibilityService {
         lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
         lp.format = PixelFormat.TRANSLUCENT;
         lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.gravity = Gravity.TOP ;  // stick it to the top
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        lp.gravity = Gravity.TOP;  // stick it to the top
+        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+        lp.height = WindowManager.LayoutParams.MATCH_PARENT;
 
         LayoutInflater inflater = LayoutInflater.from(this);
-        inflater.inflate(R.layout.action_bar, mLayout);
+        View actionBar = inflater.inflate(R.layout.action_bar, mLayout);
         wm.addView(mLayout, lp);       // add it to the screen
+
+        //trying to get this work for all 3 buttons
+        View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn), (View)actionBar.findViewById(R.id.playBtn)};
+
+        //set an ontouchlistener for each button
+        for (int i=0; i < buttonArray.length; i++){
+            buttonArray[i].setOnTouchListener(this);
+        }
+
+        //this works for one button
+        View draggableStartButton = (View)actionBar.findViewById(R.id.listenBtn);
+        draggableStartButton.setOnTouchListener(this);
+
+
     }
+
+
+
 
 
     private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
@@ -803,4 +829,22 @@ public class VoiceToActionService extends AccessibilityService {
             }
         });
     }
+
+    @Override
+    public boolean onTouch(View view1, MotionEvent motionEvent){
+        switch(motionEvent.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                dX1 = view1.getX() - motionEvent.getRawX();
+                dY1 = view1.getY() - motionEvent.getRawY();
+
+                break;
+            case MotionEvent.ACTION_MOVE:
+                view1.setX(motionEvent.getRawX() + dX1);
+                view1.setY(motionEvent.getRawY() + dY1);
+
+                break;
+        }
+        return false;
+    }
+
 }
