@@ -23,12 +23,28 @@ import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.Toast;
 
-import com.research.voicify.deeplink.DeepLinkAdd;
+//import com.google.android.gms.auth.api.signin.GoogleSignIn;
+//import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+//import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+//import com.research.voicify.GoogleNLU.LanguageEntityExtractionPredict;
+import com.research.voicify.GoogleNLU.GoogleAutoML;
+import com.research.voicify.GoogleNLU.RequestBody;
+import com.research.voicify.GoogleNLU.RespondBody;
 import com.research.voicify.deeplink.DeepLinkList;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
     // NOTE: Initiate TextToSpeech variable
@@ -36,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     // NOTE: UI View outlets below here
     EditText speechTextOutlet;
     Button listenBtn;
+    Button settingBtn;
     Switch ttsToggle;
     Button deepLink;
     // NOTE: Global Variables below here
@@ -51,7 +68,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+//        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//                .requestIdToken("684234233070-98qep46vheqpo85qklqgmc6269dpudno.apps.googleusercontent.com")
+//                .build();
+//        GoogleSignInClient mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
         Uri uri = getIntent().getData();
@@ -60,8 +80,15 @@ public class MainActivity extends AppCompatActivity {
             argumentCount = argumentVector.size();          // deep linking example from WK1
             toastArgs();
         }
+//        try {
+//            LanguageEntityExtractionPredict.predict("Enter Cinema in Map");
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         // NOTE: Programmatically link UI elements here
+
         listenBtn = findViewById(R.id.listenBtn);
         speechTextOutlet = findViewById(R.id.speechTextEditText);
         ttsToggle = (Switch) findViewById(R.id.ttsMaster);
@@ -79,6 +106,15 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Log.d(debugLogTag, "start");
                 speechRecognizer.startListening(speechRecognizerIntent);       // on click listener to start listening audio
+            }
+
+        });
+        settingBtn = findViewById(R.id.buttonsetting);
+        settingBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent myIntent = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivity(myIntent);
             }
 
         });
@@ -188,6 +224,60 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void autoMLRequest(){
+        String token = "ya29.c.Kp8BEwhf60pUZW0RcdruH7f0Vs_L681dzPEbxFE9ddYyBE_ahoahIh0GAFJYc_Ue5iMa9cWWfQxKjQwCEMgMnAWQa0AtBjMGuO9Ws3JrXN1PFjTxWVd_kSAFRwcOoyCKdW6_kfyRQiL9lKgFcDgfXZ1w4eBSF27F9PzvjcMr-QSmARBs5pacZ2w-_fKZRZ96V-0AHim4RAyvcgBKgT6OK80H";
+        Interceptor headerInterceptor  = new Interceptor() {
+            @Override
+            public okhttp3.Response intercept(Chain chain) throws IOException {
+                return chain.proceed(chain.request().newBuilder()
+                        .addHeader("Authorization","Bearer " + token).build());
+
+            }
+        };
+
+        RequestBody.Payload.TextSnippet textSnippet = new RequestBody.Payload.TextSnippet("order uber");
+        RequestBody.Payload payload = new RequestBody.Payload(textSnippet);
+        RequestBody requestBody = new RequestBody(payload);
+
+
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        clientBuilder.addInterceptor(loggingInterceptor);
+        clientBuilder.addInterceptor(headerInterceptor);
+        Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
+                .baseUrl("https://automl.googleapis.com/v1/")
+                .client(clientBuilder.build())
+                .addConverterFactory(GsonConverterFactory.create()) // add converter
+                .build();
+
+
+        GoogleAutoML service = retrofit.create(GoogleAutoML.class);
+        Call<RespondBody> serviceSynonyms = service.getEntities(requestBody);  // pass in input string to find synonyms.
+        serviceSynonyms.enqueue(new Callback<RespondBody>(){  // asynchronous call
+
+                @Override
+                public void onResponse(Call<RespondBody> call, Response<RespondBody> response) {
+
+                    RespondBody respondBody = response.body();   // get the body store data
+                    RespondBody.Payload[] payloads = respondBody.getPayload();
+                    for(RespondBody.Payload payload1: payloads){
+                        Log.d("TESTT",   payload1.getDisplayName() + " " + payload1.textExtraction.textSegment.getContent()  );
+                    }
+
+
+
+                }
+
+                @Override
+                public void onFailure(Call<RespondBody> call, Throwable t) {
+                    Log.d("Testt", t.getMessage());
+                }
+            });
+
+
+
+    }
     private void checkAudioPermission() {
         /*
          * This function checks the permissions and starts the settings activity for the given app

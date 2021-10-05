@@ -12,7 +12,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Voicify">
+        android:theme="@style/Theme.Voicify"
+        tools:ignore="ExtraText">
         <activity android:name=".MainActivity">
 
             <intent-filter>
@@ -58,6 +59,11 @@
         <activity
             android:name=".deeplink.DeepLinkList"
             android:label="DeepLinkList"
+            >
+        </activity>
+        <activity
+            android:name=".SettingsActivity"
+            android:label="SettingsActivity"
             >
         </activity>
         <service

@@ -7,16 +7,11 @@
     android:layout_height="fill_parent"
     android:focusable="false">
 
-
-
-
     <Button
         android:id="@+id/listenBtn"
         android:text="start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
-
-
 
     <Button
         android:id="@+id/recordBtn"
@@ -29,6 +24,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="play" />
+
 
     <!--    <Switch-->
 <!--        android:id="@+id/ttsMaster"-->

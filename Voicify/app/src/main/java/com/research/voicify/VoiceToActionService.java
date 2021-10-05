@@ -9,9 +9,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -66,6 +68,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
     int width,height;
+
     SharedPreferences sharedPreferences;
     ArrayList<String> predefinedCommands = new ArrayList<>();
     ArrayList<String> currentSequence = new ArrayList<String>();
@@ -85,7 +88,22 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     WindowManager wm;
     WindowManager.LayoutParams switchBar; // stores layout parameters for movable switchBar
 
+
+    String[] tooltipColorSpinnerItems = new String[]{"#64b5f6","#2b2b2b", "#ff4040"};
+    int[] tooltipSizeSpinnerItems = new int[]{14,18,22};
+    int[] tooltipOpacitySpinnerItems = new int[]{250,220,170,120};
+    int[] buttonOpacitySpinnerItems = new int[]{250,220,170,120};
+    boolean[] buttonRecordItems = new boolean[]{false,true};
+
+    int tooltipColor = 0 ;
+    int tooltipSize = 0;
+    int tooltipOpacity = 0;
+    int buttonOpacity = 0;
+    int buttonRecordTxt = 0;
+  
     long currentTime;
+
+
     //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
     private static final Map<String,String> speechPrompt=new HashMap<String,String>();
     static {
@@ -101,7 +119,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
     ArrayList<String> savedCommands = new ArrayList<>();
 
-    private int currentTooltipCount = 0;
+    private int currentTooltipCount = 1;
     boolean isRecording = false;
     boolean isPlaying = false;
 
@@ -122,6 +140,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             return;
         }
         if(isNotBlockedEvent()) {
+            checkSettingsChanged();
             removeAllTooltips();    // remove all old  tooltip when screen changed
             currentSource = getRootInActiveWindow(); // update the current root node
             printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
@@ -129,7 +148,19 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         }
 
     }
-
+    public void checkSettingsChanged(){
+        tooltipColor = sharedPreferences.getInt(SettingsActivity.TOOLTIP_COLOR,0);
+        tooltipSize = sharedPreferences.getInt(SettingsActivity.TOOLTIP_SIZE,0);
+        tooltipOpacity = sharedPreferences.getInt(SettingsActivity.TOOLTIP_OPACITY,0);
+        int previousBtnOpacity = buttonOpacity;
+        int previousBtnRecord = buttonRecordTxt;
+        buttonOpacity = sharedPreferences.getInt(SettingsActivity.BUTTON_OPACITY,0);
+        buttonRecordTxt = sharedPreferences.getInt(SettingsActivity.BUTTON_RECORD,0);
+        if(previousBtnOpacity != buttonOpacity ||buttonRecordTxt != previousBtnRecord){
+            wm.removeView(mLayout);
+            createSwitch();
+        }
+    }
     public boolean isNotBlockedEvent(){
         Date date = new Date();
         long time = date.getTime();
@@ -333,9 +364,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
-        configureListenButton();
-        configureRecordButton();
-        configurePlayButton();
         loadPresavedCommands();
         getDisplayMetrics();
         Log.d("Service Test","Service Connected");
@@ -353,6 +381,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         if (fetchedCommandSet != null) {
             predefinedCommands.addAll(fetchedCommandSet);
         }
+
     }
 
     private void createSwitch(){
@@ -370,6 +399,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
         }
         mLayout = new FrameLayout(this);
+
         // Create layout for switchBar
         switchBar = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -380,16 +410,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         switchBar.gravity = Gravity.TOP;  // stick it to the top
         //WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
 
-
-
-//        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-//        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-//        lp.format = PixelFormat.TRANSLUCENT;
-//        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-//
-
-//        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-//        lp.height = WindowManager.LayoutParams.MATCH_PARENT;
 
         LayoutInflater inflater = LayoutInflater.from(this);
         View actionBar = inflater.inflate(R.layout.action_bar, mLayout);
@@ -403,10 +423,22 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             buttonArray[i].setOnTouchListener(this);
         }
 
-        //this works for one button
-//        View draggableStartButton = (View)actionBar.findViewById(R.id.listenBtn);
-//        draggableStartButton.setOnTouchListener(this);
 
+        Button recordBtn = mLayout.findViewById(R.id.recordBtn);
+        Button playBtn = mLayout.findViewById(R.id.playBtn);
+        Button listenBtn = mLayout.findViewById(R.id.listenBtn);
+
+        recordBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
+        playBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
+        listenBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
+
+        configureListenButton(listenBtn);
+        configureRecordButton(recordBtn);
+        configurePlayButton(playBtn);
+
+        if(!buttonRecordItems[buttonRecordTxt]){
+            recordBtn.setVisibility(View.GONE);
+        }
 
     }
 
@@ -422,26 +454,31 @@ public class VoiceToActionService extends AccessibilityService implements View.O
          * param: y is the location in y axis
          */
           // window manager
+
         FrameLayout tooltipLayout = new FrameLayout(this);      // create new layout for each tooltip
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
-        lp.x = x;       // x location
-        lp.y = y - 100;       // y location
+        WindowManager.LayoutParams tooltipLayoutParams = new WindowManager.LayoutParams();
+        tooltipLayoutParams.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        tooltipLayoutParams.format = PixelFormat.TRANSLUCENT;
+        tooltipLayoutParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        tooltipLayoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        tooltipLayoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        tooltipLayoutParams.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
+        tooltipLayoutParams.x = x;       // x location
+        tooltipLayoutParams.y = y - 100;       // y location
         LayoutInflater inflater = LayoutInflater.from(this);
         inflater.inflate(R.layout.tooltip_number, tooltipLayout);   // inflate the view to the screen
-        wm.addView(tooltipLayout, lp);
+        wm.addView(tooltipLayout, tooltipLayoutParams);
 
         TextView tooltip = tooltipLayout.findViewById(R.id.tooltip);    // set the count based on current count
         tooltip.setText(currentTooltipCount + "");
-                 // add to the list to retrieve later
-
-         tooltipRequiredNodes.add(new TooltipRequiredNode(nodeInfo,currentTooltipCount,tooltipLayout));
-         currentTooltipCount += 1;
+        tooltip.setTextSize(tooltipSizeSpinnerItems[tooltipSize]);
+        tooltip.setBackgroundResource(R.drawable.tooltip_shape);  //drawable id
+        GradientDrawable gd = (GradientDrawable) tooltip.getBackground().getCurrent();
+        gd.setColor(Color.parseColor(tooltipColorSpinnerItems[tooltipColor])); //set color
+        gd.setAlpha(tooltipOpacitySpinnerItems[tooltipOpacity]);        // add to the list to retrieve later
+        gd.setSize(tooltipSizeSpinnerItems[tooltipSize] + 40,tooltipSizeSpinnerItems[tooltipSize]+ 5);
+        tooltipRequiredNodes.add(new TooltipRequiredNode(nodeInfo,currentTooltipCount,tooltipLayout));
+        currentTooltipCount += 1;
 
     }
 
@@ -455,12 +492,12 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
         }
         // reset all variables when changing to new screen.
-        currentTooltipCount = 0;
+        currentTooltipCount = 1;
         tooltipRequiredNodes.clear();
         foundLabeledNodes.clear();
     }
 
-    private void configureListenButton() {
+    private void configureListenButton(Button listenBtn) {
         /**
          * This function is called after the service has been connected. This function binds
          * functionality to the master button which can be used to turn on/off the tool.
@@ -470,7 +507,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
          * @post-cond: functionality has been added to the inflated button
          * */
 
-        Button listenBtn = (Button) mLayout.findViewById(R.id.listenBtn);
+
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -486,9 +523,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             }
         });
     }
-    private void configureRecordButton() {
+    private void configureRecordButton(Button listenBtn) {
 
-        Button listenBtn = (Button) mLayout.findViewById(R.id.recordBtn);
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -519,9 +555,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             }
         });
     }
-    private void configurePlayButton() {
+    private void configurePlayButton( Button listenBtn) {
 
-        Button listenBtn = (Button) mLayout.findViewById(R.id.playBtn);
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
