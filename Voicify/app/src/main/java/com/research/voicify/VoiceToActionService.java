@@ -62,7 +62,7 @@ import java.util.Calendar;
 
 
 @RequiresApi(api = Build.VERSION_CODES.R)
-public class VoiceToActionService extends AccessibilityService implements View.OnTouchListener {
+public class VoiceToActionService extends AccessibilityService implements View.OnTouchListener{
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
     int width,height;
@@ -80,7 +80,11 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
+
+    // Defining window manager for overlay elements and switchBar
     WindowManager wm;
+    WindowManager.LayoutParams switchBar; // stores layout parameters for movable switchBar
+
     long currentTime;
     //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
     private static final Map<String,String> speechPrompt=new HashMap<String,String>();
@@ -100,12 +104,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     private int currentTooltipCount = 0;
     boolean isRecording = false;
     boolean isPlaying = false;
-    private float dX1;
-    private float dY1;
-    private float dX2;
-    private float dY2;
-    private float dX3;
-    private float dY3;
+
+
 
 
     @Override
@@ -361,18 +361,39 @@ public class VoiceToActionService extends AccessibilityService implements View.O
          * connected and will be gone when service is shutdown
          *
          */
+
+        // Check for permissions
+        int LAYOUT_FLAG;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        } else {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
+        }
         mLayout = new FrameLayout(this);
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.gravity = Gravity.TOP;  // stick it to the top
-        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-        lp.height = WindowManager.LayoutParams.MATCH_PARENT;
+        // Create layout for switchBar
+        switchBar = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                LAYOUT_FLAG,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        switchBar.gravity = Gravity.TOP;  // stick it to the top
+        //WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+
+
+
+//        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+//        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+//        lp.format = PixelFormat.TRANSLUCENT;
+//        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+//
+
+//        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+//        lp.height = WindowManager.LayoutParams.MATCH_PARENT;
 
         LayoutInflater inflater = LayoutInflater.from(this);
         View actionBar = inflater.inflate(R.layout.action_bar, mLayout);
-        wm.addView(mLayout, lp);       // add it to the screen
+        wm.addView(mLayout, switchBar);       // add it to the screen
 
         //trying to get this work for all 3 buttons
         View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn), (View)actionBar.findViewById(R.id.playBtn)};
@@ -383,8 +404,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         }
 
         //this works for one button
-        View draggableStartButton = (View)actionBar.findViewById(R.id.listenBtn);
-        draggableStartButton.setOnTouchListener(this);
+//        View draggableStartButton = (View)actionBar.findViewById(R.id.listenBtn);
+//        draggableStartButton.setOnTouchListener(this);
 
 
     }
@@ -830,21 +851,34 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         });
     }
 
+    // variable for switch bar coordinates
+    private int initialX;
+    private int initialY;
+    private float initialTouchX;
+    private float initialTouchY;
+
+    // This method is responsible for updating the switchBar coordniates upon touch and updating the view
     @Override
     public boolean onTouch(View view1, MotionEvent motionEvent){
+
         switch(motionEvent.getAction()){
+
             case MotionEvent.ACTION_DOWN:
-                dX1 = view1.getX() - motionEvent.getRawX();
-                dY1 = view1.getY() - motionEvent.getRawY();
-
+                initialX = switchBar.x;
+                initialY = switchBar.y;
+                initialTouchX = motionEvent.getRawX();
+                initialTouchY = motionEvent.getRawY();
                 break;
-            case MotionEvent.ACTION_MOVE:
-                view1.setX(motionEvent.getRawX() + dX1);
-                view1.setY(motionEvent.getRawY() + dY1);
 
+            case MotionEvent.ACTION_UP:
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                switchBar.x = initialX + (int) (motionEvent.getRawX() - initialTouchX);
+                switchBar.y = initialY + (int) (motionEvent.getRawY() - initialTouchY);
+                wm.updateViewLayout(mLayout, switchBar);
                 break;
         }
         return false;
     }
-
 }
