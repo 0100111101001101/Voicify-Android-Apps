@@ -26,6 +26,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -63,7 +64,7 @@ import java.util.Calendar;
 
 
 @RequiresApi(api = Build.VERSION_CODES.R)
-public class VoiceToActionService extends AccessibilityService {
+public class VoiceToActionService extends AccessibilityService implements View.OnTouchListener{
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
     int width,height;
@@ -82,7 +83,12 @@ public class VoiceToActionService extends AccessibilityService {
     String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
+
+    // Defining window manager for overlay elements and switchBar
     WindowManager wm;
+    WindowManager.LayoutParams switchBar; // stores layout parameters for movable switchBar
+
+
     String[] tooltipColorSpinnerItems = new String[]{"#64b5f6","#2b2b2b", "#ff4040"};
     int[] tooltipSizeSpinnerItems = new int[]{14,18,22};
     int[] tooltipOpacitySpinnerItems = new int[]{250,220,170,120};
@@ -94,6 +100,7 @@ public class VoiceToActionService extends AccessibilityService {
     int tooltipOpacity = 0;
     int buttonOpacity = 0;
     int buttonRecordTxt = 0;
+  
     long currentTime;
 
 
@@ -115,6 +122,10 @@ public class VoiceToActionService extends AccessibilityService {
     private int currentTooltipCount = 1;
     boolean isRecording = false;
     boolean isPlaying = false;
+
+
+
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         /**
@@ -379,20 +390,40 @@ public class VoiceToActionService extends AccessibilityService {
          * connected and will be gone when service is shutdown
          *
          */
+
+        // Check for permissions
+        int LAYOUT_FLAG;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        } else {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
+        }
         mLayout = new FrameLayout(this);
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.gravity = Gravity.TOP ;  // stick it to the top
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.y = 150;
+
+        // Create layout for switchBar
+        switchBar = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                LAYOUT_FLAG,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        switchBar.gravity = Gravity.TOP;  // stick it to the top
+        //WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
 
 
         LayoutInflater inflater = LayoutInflater.from(this);
-        inflater.inflate(R.layout.action_bar, mLayout);
-        wm.addView(mLayout, lp);       // add it to the screen
+        View actionBar = inflater.inflate(R.layout.action_bar, mLayout);
+        wm.addView(mLayout, switchBar);       // add it to the screen
+
+        //trying to get this work for all 3 buttons
+        View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn), (View)actionBar.findViewById(R.id.playBtn)};
+
+        //set an ontouchlistener for each button
+        for (int i=0; i < buttonArray.length; i++){
+            buttonArray[i].setOnTouchListener(this);
+        }
+
+
         Button recordBtn = mLayout.findViewById(R.id.recordBtn);
         Button playBtn = mLayout.findViewById(R.id.playBtn);
         Button listenBtn = mLayout.findViewById(R.id.listenBtn);
@@ -410,6 +441,9 @@ public class VoiceToActionService extends AccessibilityService {
         }
 
     }
+
+
+
 
 
     private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
@@ -850,5 +884,36 @@ public class VoiceToActionService extends AccessibilityService {
                 // reserved by android for future events
             }
         });
+    }
+
+    // variable for switch bar coordinates
+    private int initialX;
+    private int initialY;
+    private float initialTouchX;
+    private float initialTouchY;
+
+    // This method is responsible for updating the switchBar coordniates upon touch and updating the view
+    @Override
+    public boolean onTouch(View view1, MotionEvent motionEvent){
+
+        switch(motionEvent.getAction()){
+
+            case MotionEvent.ACTION_DOWN:
+                initialX = switchBar.x;
+                initialY = switchBar.y;
+                initialTouchX = motionEvent.getRawX();
+                initialTouchY = motionEvent.getRawY();
+                break;
+
+            case MotionEvent.ACTION_UP:
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                switchBar.x = initialX + (int) (motionEvent.getRawX() - initialTouchX);
+                switchBar.y = initialY + (int) (motionEvent.getRawY() - initialTouchY);
+                wm.updateViewLayout(mLayout, switchBar);
+                break;
+        }
+        return false;
     }
 }
