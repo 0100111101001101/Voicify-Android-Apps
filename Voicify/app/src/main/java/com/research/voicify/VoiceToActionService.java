@@ -33,7 +33,6 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -54,7 +53,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
-import java.util.Calendar;
 
 /**
  * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
@@ -421,12 +419,18 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         //set an ontouchlistener for each button
         for (int i=0; i < buttonArray.length; i++){
             buttonArray[i].setOnTouchListener(this);
+
         }
 
 
         Button recordBtn = mLayout.findViewById(R.id.recordBtn);
         Button playBtn = mLayout.findViewById(R.id.playBtn);
         Button listenBtn = mLayout.findViewById(R.id.listenBtn);
+
+        recordBtn.setBackgroundResource(R.drawable.roundedbutton);
+        playBtn.setBackgroundResource(R.drawable.roundedbutton);
+        listenBtn.setBackgroundResource(R.drawable.roundedbutton);
+
 
         recordBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
         playBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
