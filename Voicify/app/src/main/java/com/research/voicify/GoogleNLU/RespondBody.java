@@ -4,6 +4,10 @@ package com.research.voicify.GoogleNLU;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This is a Java object class which defines the format of respond body in
+ * restAPI connection to the AutoML server.
+ */
 public class RespondBody {
     public RespondBody(Payload[] payload) {
         this.payload = payload;
@@ -72,11 +76,11 @@ public class RespondBody {
 
                 String content;
             }
-            public TextSegment textSegment;
+            public TextSegment textSegment;     // the returned string which gives out the label.
         }
 
 
-        String displayName;
+        String displayName;     // the name of the classified item ( can be item, action or apps,..)
 
 
     }

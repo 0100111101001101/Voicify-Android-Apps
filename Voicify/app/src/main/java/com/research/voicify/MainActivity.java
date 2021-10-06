@@ -224,60 +224,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void autoMLRequest(){
-        String token = "ya29.c.Kp8BEwhf60pUZW0RcdruH7f0Vs_L681dzPEbxFE9ddYyBE_ahoahIh0GAFJYc_Ue5iMa9cWWfQxKjQwCEMgMnAWQa0AtBjMGuO9Ws3JrXN1PFjTxWVd_kSAFRwcOoyCKdW6_kfyRQiL9lKgFcDgfXZ1w4eBSF27F9PzvjcMr-QSmARBs5pacZ2w-_fKZRZ96V-0AHim4RAyvcgBKgT6OK80H";
-        Interceptor headerInterceptor  = new Interceptor() {
-            @Override
-            public okhttp3.Response intercept(Chain chain) throws IOException {
-                return chain.proceed(chain.request().newBuilder()
-                        .addHeader("Authorization","Bearer " + token).build());
 
-            }
-        };
-
-        RequestBody.Payload.TextSnippet textSnippet = new RequestBody.Payload.TextSnippet("order uber");
-        RequestBody.Payload payload = new RequestBody.Payload(textSnippet);
-        RequestBody requestBody = new RequestBody(payload);
-
-
-        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        clientBuilder.addInterceptor(loggingInterceptor);
-        clientBuilder.addInterceptor(headerInterceptor);
-        Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
-                .baseUrl("https://automl.googleapis.com/v1/")
-                .client(clientBuilder.build())
-                .addConverterFactory(GsonConverterFactory.create()) // add converter
-                .build();
-
-
-        GoogleAutoML service = retrofit.create(GoogleAutoML.class);
-        Call<RespondBody> serviceSynonyms = service.getEntities(requestBody);  // pass in input string to find synonyms.
-        serviceSynonyms.enqueue(new Callback<RespondBody>(){  // asynchronous call
-
-                @Override
-                public void onResponse(Call<RespondBody> call, Response<RespondBody> response) {
-
-                    RespondBody respondBody = response.body();   // get the body store data
-                    RespondBody.Payload[] payloads = respondBody.getPayload();
-                    for(RespondBody.Payload payload1: payloads){
-                        Log.d("TESTT",   payload1.getDisplayName() + " " + payload1.textExtraction.textSegment.getContent()  );
-                    }
-
-
-
-                }
-
-                @Override
-                public void onFailure(Call<RespondBody> call, Throwable t) {
-                    Log.d("Testt", t.getMessage());
-                }
-            });
-
-
-
-    }
     private void checkAudioPermission() {
         /*
          * This function checks the permissions and starts the settings activity for the given app

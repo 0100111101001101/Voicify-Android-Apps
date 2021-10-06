@@ -13,6 +13,7 @@ import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -38,11 +39,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
+import com.research.voicify.GoogleNLU.GoogleAutoML;
+import com.research.voicify.GoogleNLU.RequestBody;
+import com.research.voicify.GoogleNLU.RespondBody;
 import com.research.voicify.elements.LabelFoundNode;
 import com.research.voicify.elements.TooltipRequiredNode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -53,6 +60,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
+
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
@@ -427,14 +443,15 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         Button playBtn = mLayout.findViewById(R.id.playBtn);
         Button listenBtn = mLayout.findViewById(R.id.listenBtn);
 
+        Drawable unwrappedDrawable = AppCompatResources.getDrawable(getApplicationContext(), R.drawable.roundedbutton);
+        Drawable wrappedDrawable = DrawableCompat.wrap(unwrappedDrawable);
+        DrawableCompat.setTint(wrappedDrawable, Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
+
         recordBtn.setBackgroundResource(R.drawable.roundedbutton);
         playBtn.setBackgroundResource(R.drawable.roundedbutton);
         listenBtn.setBackgroundResource(R.drawable.roundedbutton);
 
 
-        recordBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
-        playBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
-        listenBtn.setBackgroundColor(Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
 
         configureListenButton(listenBtn);
         configureRecordButton(recordBtn);
@@ -919,5 +936,53 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 break;
         }
         return false;
+    }
+    private void autoMLRequest(String command){
+        String token = "ya29.c.Kp8BEwhf60pUZW0RcdruH7f0Vs_L681dzPEbxFE9ddYyBE_ahoahIh0GAFJYc_Ue5iMa9cWWfQxKjQwCEMgMnAWQa0AtBjMGuO9Ws3JrXN1PFjTxWVd_kSAFRwcOoyCKdW6_kfyRQiL9lKgFcDgfXZ1w4eBSF27F9PzvjcMr-QSmARBs5pacZ2w-_fKZRZ96V-0AHim4RAyvcgBKgT6OK80H";
+        Interceptor headerInterceptor  = new Interceptor() {
+            @Override
+            public okhttp3.Response intercept(Chain chain) throws IOException {
+                return chain.proceed(chain.request().newBuilder()
+                        .addHeader("Authorization","Bearer " + token).build());
+
+            }
+        };
+
+        RequestBody.Payload.TextSnippet textSnippet = new RequestBody.Payload.TextSnippet(command);
+        RequestBody.Payload payload = new RequestBody.Payload(textSnippet);
+        RequestBody requestBody = new RequestBody(payload);
+
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        clientBuilder.addInterceptor(loggingInterceptor);
+        clientBuilder.addInterceptor(headerInterceptor);
+        Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
+                .baseUrl("https://automl.googleapis.com/v1/")
+                .client(clientBuilder.build())
+                .addConverterFactory(GsonConverterFactory.create()) // add converter
+                .build();
+
+
+        GoogleAutoML service = retrofit.create(GoogleAutoML.class);
+        Call<RespondBody> serviceSynonyms = service.getEntities(requestBody);  // pass in input string to find synonyms.
+        serviceSynonyms.enqueue(new Callback<RespondBody>(){  // asynchronous call
+
+            @Override
+            public void onResponse(Call<RespondBody> call, Response<RespondBody> response) {
+
+                RespondBody respondBody = response.body();   // get the body store data
+                RespondBody.Payload[] payloads = respondBody.getPayload();
+                for(RespondBody.Payload payload1: payloads){
+                    Log.d(debugLogTag,   payload1.getDisplayName() + " " + payload1.textExtraction.textSegment.getContent()  );
+                    
+                }
+            }
+
+            @Override
+            public void onFailure(Call<RespondBody> call, Throwable t) {
+                Log.d(debugLogTag, t.getMessage());
+            }
+        });
     }
 }

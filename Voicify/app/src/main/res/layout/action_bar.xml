@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
- <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
 
     android:id="@+id/actionBar"
     android:orientation="horizontal"
@@ -12,9 +13,9 @@
     <Button
         android:id="@+id/listenBtn"
         android:layout_width="50dp"
-        android:layout_height="40dp"
+        android:layout_height="50dp"
         android:layout_margin="5dp"
-        android:backgroundTint="#64b5f6"
+        app:cornerRadius="800dp"
         android:background="@drawable/roundedbutton"
 
         android:text="start" />
@@ -23,18 +24,18 @@
     <Button
         android:id="@+id/recordBtn"
         android:layout_width="50dp"
-        android:layout_height="40dp"
+        android:layout_height="50dp"
         android:layout_margin="5dp"
-        android:backgroundTint="#64b5f6"
+        app:cornerRadius="8dp"
         android:background="@drawable/roundedbutton"
         android:text="record" />
 
     <Button
         android:id="@+id/playBtn"
         android:layout_width="50dp"
-        android:layout_height="40dp"
+        android:layout_height="50dp"
         android:layout_margin="5dp"
-        android:backgroundTint="#64b5f6"
+         app:cornerRadius="8dp"
         android:background="@drawable/roundedbutton"
         android:text="play" />
 
