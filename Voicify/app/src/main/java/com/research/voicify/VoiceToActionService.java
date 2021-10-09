@@ -71,9 +71,9 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
- * @version: V1.1
- * @implNote: last updated on 15/08/2021
+ * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, 29068215), Alex Dumitru(adum6, 27820289)
+ * @version: V1.8
+ * @implNote: last updated on 09/10/2021
  */
 
 
@@ -86,7 +86,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     SharedPreferences sharedPreferences;
     ArrayList<String> predefinedCommands = new ArrayList<>();
     ArrayList<String> currentSequence = new ArrayList<String>();
-    AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
+    AccessibilityNodeInfo currentSource;
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
     ArrayList<LabelFoundNode> foundLabeledNodes = new ArrayList<>();
@@ -103,7 +103,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     WindowManager.LayoutParams switchBar; // stores layout parameters for movable switchBar
 
 
-    String[] tooltipColorSpinnerItems = new String[]{"#64b5f6","#2b2b2b", "#ff4040"};
+    String[] tooltipColorSpinnerItems = new String[]{"#64b5f6","#2b2b2b","#ff4040"};
     int[] tooltipSizeSpinnerItems = new int[]{14,18,22};
     int[] tooltipOpacitySpinnerItems = new int[]{250,220,170,120};
     int[] buttonOpacitySpinnerItems = new int[]{250,220,170,120};
@@ -157,7 +157,9 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             checkSettingsChanged();
             removeAllTooltips();    // remove all old  tooltip when screen changed
             currentSource = getRootInActiveWindow(); // update the current root node
-            printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+            if(isOn) {
+                printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+            }
             autoExecutePredefinedCommand();
         }
 
@@ -182,7 +184,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             currentTime = time;
             return true;
         }
-        Log.d(debugLogTag, "Event blocked for repetitive calls");
+        //Log.d(debugLogTag, "Event blocked for repetitive calls");
         return false;
     }
 
@@ -192,12 +194,12 @@ public class VoiceToActionService extends AccessibilityService implements View.O
          */
         if(isPlaying){  // check if any sequence is triggered
             if(currentSequence.size() == 0){       // check if there is still element to execute
-                Log.d(debugLogTag,"no more item to press");
+                //Log.d(debugLogTag,"no more item to press");
                 isPlaying = false;      // finished the sequence
             }
             else if(commandExecution(currentSequence.get(0))){ // execute the oldest
                 currentSequence.remove(0);     // remove it if successful
-                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
+                //Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
                 isPlaying = true;       // keep playing true for next invocation
             }
         }
@@ -229,19 +231,19 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             String label = "";
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
-                     Log.d(debugLogTag,"Available commands: " + label);
+                     //Log.d(debugLogTag,"Available commands: " + label);
                     return;
                 } else {
                     // no information about node or event (Tags to be assigned!)
                     String foundLabel  = searchForTextView(nodeInfo,"");
                     if (!foundLabel.equals("")){
                         foundLabeledNodes.add(new LabelFoundNode(nodeInfo,foundLabel.toLowerCase()));
-                        Log.d(debugLogTag,"Available commands: " +foundLabel.toLowerCase());
+                        //Log.d(debugLogTag,"Available commands: " +foundLabel.toLowerCase());
                     } else {
                         Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
                         nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
                          if(rectTest.right < width && rectTest.bottom<height){
-                            Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
+                            //Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
                             inflateTooltip((rectTest.right+rectTest.left)/2, rectTest.top, nodeInfo);    // call function to create number tooltips
 
                         }
@@ -344,7 +346,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
                     @Override
                     public void onCompleted(GestureDescription gestureDescription) { // gesture execution
-                        Log.d(debugLogTag,"Gesture Completed");
+                        //Log.d(debugLogTag,"Gesture Completed");
                         super.onCompleted(gestureDescription);
                     }
                 }, null);
@@ -380,7 +382,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
         loadPresavedCommands();
         getDisplayMetrics();
-        Log.d("Service Test","Service Connected");
+        Log.d(debugLogTag,"Service Connected");
     }
 
     private void getDisplayMetrics() {
@@ -565,8 +567,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                         editor.apply();
                     }
 
-                    Log.d(debugLogTag," " + savedCommands.size());
-                    Log.d(debugLogTag," " + savedCommands);
+                    //Log.d(debugLogTag," " + savedCommands.size());
+                    //Log.d(debugLogTag," " + savedCommands);
                 }
             }
         });
@@ -700,11 +702,11 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         // Processes input first to determine if number label was called
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
-            Log.d(debugLogTag,word);
+            //Log.d(debugLogTag,word);
             if (Integer.parseInt(word) <= currentTooltipCount){
                 if (tooltipRequiredNodes.size() >= Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)-1).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                     // perform click with condition to return once click is successful
-                    Log.d(debugLogTag, "Clicked number: " + word);    // log the information
+                    //Log.d(debugLogTag, "Clicked number: " + word);    // log the information
                     return true;
                 }
 
@@ -714,7 +716,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         for(LabelFoundNode foundLabeledNode: foundLabeledNodes){
             if(foundLabeledNode.label.contains(word)){
                 if (foundLabeledNode.nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                    Log.d(debugLogTag, "Clicked on description:" + word);
+                    //Log.d(debugLogTag, "Clicked on description:" + word);
                     return true;
                 }
   // return once clicked
@@ -725,7 +727,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on item:" + word);
+                //Log.d(debugLogTag, "Clicked on item:" + word);
             }
             return true;     // return once clicked
         }
@@ -734,7 +736,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         list = currentSource.findAccessibilityNodeInfosByText(camelCaseWord);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on item:" + word);
+                //Log.d(debugLogTag, "Clicked on item:" + word);
             }
 
             return true;     // return once clicked
@@ -751,17 +753,17 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         String[] words = match.split(" ");
         ArrayList<String> trimmedWords = new ArrayList<String>();
         // ["open","uber"...]
-        Log.d(debugLogTag,match);
+        //Log.d(debugLogTag,match);
         if(predefinedCommands.contains(match.toLowerCase())){
             String commands  = sharedPreferences.getString(match,null);
             currentSequence.clear();
             Collections.addAll(currentSequence, commands.split(";"));
             if(currentSequence.size() == 0){
-                Log.d(debugLogTag,"no more item to press");
+                //Log.d(debugLogTag,"no more item to press");
             }
             else if(commandExecution(currentSequence.get(0))){
                 currentSequence.remove(0);
-                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
+                //Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
                 isPlaying = true;
             }
             return true;
@@ -970,3 +972,12 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         });
     }
 }
+
+
+/*
+* 1) Button for switching between AutoML & Custom Action-Target Matching algorithm
+* 2) Function in VoiceToActionService to execute action on a target.
+*       param - ArrayList<HashMap<Action,String>>
+                eg: [{OPEN: "chrome"}]
+  3)
+* */
