@@ -21,12 +21,14 @@ public class SettingsActivity extends AppCompatActivity   implements
     int tooltipSize = 0;
     int buttonOpacity = 0;
     int buttonRecordTxt = 0;
+    int buttonAlgoTxt = 0;
 
     static final String[] tooltipColorSpinnerItems = new String[]{"blue","black","red"};
     static final String[] tooltipOpacitySpinnerItems = new String[]{"100%","75%", "50%","25%"};
     static final String[] tooltipSizeSpinnerItems = new String[]{"small","medium", "large"};
     static final String[] buttonOpacitySpinnerItems = new String[]{"100%","75%", "50%","25%"};
     static final String[] buttonRecordItems = new String[]{"hide","show"};
+    static final String[] buttonAlgoItems = new String[]{"Custom A-T Match", "AutoML"};
 
 
     SharedPreferences sharedPreferences;
@@ -36,6 +38,7 @@ public class SettingsActivity extends AppCompatActivity   implements
     static final String TOOLTIP_COLOR = "tooltip_color";
     static final String TOOLTIP_SIZE = "tooltip_size";
     static final String TOOLTIP_OPACITY = "tooltip_opacity";
+    static final String BUTTON_ALGO = "btn_algo";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +52,7 @@ public class SettingsActivity extends AppCompatActivity   implements
         tooltipSize = sharedPreferences.getInt(TOOLTIP_SIZE,0);
         buttonOpacity = sharedPreferences.getInt(BUTTON_OPACITY,0);
         buttonRecordTxt = sharedPreferences.getInt(BUTTON_RECORD,0);
+        buttonAlgoTxt = sharedPreferences.getInt(BUTTON_ALGO,0);
 
         SharedPreferences.Editor editor = sharedPreferences.edit();         // call an editor to modify SF
 
@@ -82,12 +86,19 @@ public class SettingsActivity extends AppCompatActivity   implements
         buttonRecord.setOnItemSelectedListener(this);
         buttonRecord.setSelection(buttonRecordTxt);
 
+        Spinner buttonAlgo = findViewById(R.id.button_algo);
+        ArrayAdapter<String> buttonAlgoAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, buttonAlgoItems);
+        buttonAlgo.setAdapter(buttonAlgoAdapter);
+        buttonAlgo.setOnItemSelectedListener(this);
+        buttonAlgo.setSelection(buttonAlgoTxt);
+
         Button saveBtn = findViewById(R.id.button3);
         saveBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 editor.putInt(BUTTON_OPACITY,buttonOpacity);
                 editor.putInt(BUTTON_RECORD,buttonRecordTxt);
+                editor.putInt(BUTTON_ALGO,buttonAlgoTxt);
                 editor.putInt(TOOLTIP_COLOR,tooltipColor);
                 editor.putInt(TOOLTIP_SIZE,tooltipSize);
                 editor.putInt(TOOLTIP_OPACITY,tooltipOpacity);
@@ -96,9 +107,6 @@ public class SettingsActivity extends AppCompatActivity   implements
                 startActivity(myIntent);
             }
         });
-
-
-
         }
 
     @Override
@@ -124,7 +132,10 @@ public class SettingsActivity extends AppCompatActivity   implements
         {
             buttonRecordTxt =  position;
         }
-
+        else if(spinner.getId() == R.id.button_algo)
+        {
+            buttonAlgoTxt =  position;
+        }
     }
 
 
@@ -150,6 +161,10 @@ public class SettingsActivity extends AppCompatActivity   implements
         else if(spinner.getId() == R.id.button_record)
         {
             buttonRecordTxt = 0;
+        }
+        else if(spinner.getId() == R.id.button_algo)
+        {
+            buttonAlgoTxt =  0;
         }
     }
 }
