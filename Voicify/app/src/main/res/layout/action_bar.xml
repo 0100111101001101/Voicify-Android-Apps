@@ -30,14 +30,6 @@
         android:background="@drawable/roundedbutton"
         android:text="record" />
 
-    <Button
-        android:id="@+id/playBtn"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_margin="5dp"
-         app:cornerRadius="8dp"
-        android:background="@drawable/roundedbutton"
-        android:text="play" />
 
 
     <!--    <Switch-->

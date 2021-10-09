@@ -430,7 +430,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         wm.addView(mLayout, switchBar);       // add it to the screen
 
         //trying to get this work for all 3 buttons
-        View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn), (View)actionBar.findViewById(R.id.playBtn)};
+        View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn)};
 
         //set an ontouchlistener for each button
         for (int i=0; i < buttonArray.length; i++){
@@ -440,7 +440,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
 
         Button recordBtn = mLayout.findViewById(R.id.recordBtn);
-        Button playBtn = mLayout.findViewById(R.id.playBtn);
         Button listenBtn = mLayout.findViewById(R.id.listenBtn);
 
         Drawable unwrappedDrawable = AppCompatResources.getDrawable(getApplicationContext(), R.drawable.roundedbutton);
@@ -448,14 +447,10 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         DrawableCompat.setTint(wrappedDrawable, Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
 
         recordBtn.setBackgroundResource(R.drawable.roundedbutton);
-        playBtn.setBackgroundResource(R.drawable.roundedbutton);
         listenBtn.setBackgroundResource(R.drawable.roundedbutton);
-
-
 
         configureListenButton(listenBtn);
         configureRecordButton(recordBtn);
-        configurePlayButton(playBtn);
 
         if(!buttonRecordItems[buttonRecordTxt]){
             recordBtn.setVisibility(View.GONE);
@@ -576,18 +571,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             }
         });
     }
-    private void configurePlayButton( Button listenBtn) {
-
-        listenBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-              commandExecution("new command");
-
-            }
-        });
-    }
-
     private void openApp(String inputName) {
         /**
          * This function is used to check if the given string matches with any applications that the
@@ -717,8 +700,9 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         // Processes input first to determine if number label was called
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
-            if (Integer.parseInt(word) < currentTooltipCount){
-                if (tooltipRequiredNodes.size() > Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            Log.d(debugLogTag,word);
+            if (Integer.parseInt(word) <= currentTooltipCount){
+                if (tooltipRequiredNodes.size() >= Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)-1).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                     // perform click with condition to return once click is successful
                     Log.d(debugLogTag, "Clicked number: " + word);    // log the information
                     return true;
@@ -767,7 +751,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         String[] words = match.split(" ");
         ArrayList<String> trimmedWords = new ArrayList<String>();
         // ["open","uber"...]
-
+        Log.d(debugLogTag,match);
         if(predefinedCommands.contains(match.toLowerCase())){
             String commands  = sharedPreferences.getString(match,null);
             currentSequence.clear();
@@ -807,7 +791,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             scrollingActivity(trimmedWords.get(1));
             isActionInvoked = true;
         } else if(!trimmedWords.get(0).equals("")){
-            Log.d(debugLogTag,"clicking invoked for:" + trimmedWords.get(0));
             if (clickButtonByText(trimmedWords.get(0))) {
                 isActionInvoked = true;
             }
@@ -890,6 +873,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 if (matches!=null) {
                     for (String match : matches) {
                         commandExecution(match);
+                        Log.d(debugLogTag,match);
                     }
                 }
                 speechRecognizer.startListening(speechRecognizerIntent);

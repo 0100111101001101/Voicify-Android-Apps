@@ -42,16 +42,6 @@
 
         </activity>
         <activity
-        android:name=".GoogleNLU.NLUDisplayActivity"
-        android:label="GoogleNLU"
-            >
-        </activity>
-        <activity
-            android:name=".AppOpenerActivity"
-            android:label="AppOpener"
-            >
-        </activity>
-        <activity
             android:name=".deeplink.DeepLinkAdd"
             android:label="DeepLinkAdd"
             >
