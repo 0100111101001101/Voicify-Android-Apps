@@ -1,4 +1,6 @@
 package com.research.voicify.CustomActionTargetMatching;
+import android.util.Log;
+
 import java.util.*;
 
 public class ActionTargetMatcher {
@@ -135,7 +137,10 @@ public class ActionTargetMatcher {
     // Use the max length of app name on device, or 25 characters (together)
     private String getMaxTargetString(String command, Integer position){
         int maxIndex = (position+51 < command.length()) ? position+51 : command.length();
-        return command.substring(position+1,maxIndex);
+        if (position + 1 < command.length()) {
+            return command.substring(position+1,maxIndex);
+        }
+        return "";
     }
 
     /*
@@ -225,7 +230,7 @@ public class ActionTargetMatcher {
         boolean multiplePosChange = false;
 
 
-        if(maxComparableLen < characterDifferenceThreshold){
+        if(maxComparableLen < (characterDifferenceThreshold+1)){
             return false;               // base case handling
         }
 
@@ -298,6 +303,7 @@ public class ActionTargetMatcher {
         ArrayList<ArrayList<String>> validTargets = new ArrayList<ArrayList<String>>(Arrays.asList(new ArrayList<String>(),new ArrayList<String>(),new ArrayList<String>() ));
 
         for (String possibility : getTargetPossibilities(range)){
+            Log.d("FIT4003_VOICIFY", allTargetPossibilities.toString());
             for (String target : allTargetPossibilities.keySet()) {
                 // System.out.println("Possibility: "+possibility+ " Target: "+ target);
                 if(target.replace(" ","").equals(possibility)) {
@@ -344,6 +350,7 @@ public class ActionTargetMatcher {
         ArrayList<String> targets = new ArrayList<String>();
         HashMap<String,String> allTargetPossibilities = new HashMap<String,String>();
         ArrayList<ArrayList<String>> targetPriorityArrays = new ArrayList<ArrayList<String>>();
+        sentence = this.cleanElements(sentence);
 
         if(action == Action.ENTER) {
             targets = getEnterText(range);
@@ -368,11 +375,16 @@ public class ActionTargetMatcher {
                     //   // }
                     //   targets.add(largestTarget);
                     // }
+                    String suitableTarget = ".", suitableTargetClean = ".";
                     sortArrayByLength(targetPriorityArrays.get(0));
-                    for(String target: targetPriorityArrays.get(0)){
-                        targets.add(target);
-                        if(targets.size() >= 2) {break;}
+                    for(String target : targetPriorityArrays.get(0)){
+                        Log.d("FIT4003_VOICIFY", sentence + " "+ suitableTarget + " "+ targetPriorityArrays.get(0).toString());
+                        if(sentence.indexOf(suitableTargetClean)<sentence.indexOf(cleanElements(target))) {
+                            suitableTargetClean = cleanElements(target);
+                            suitableTarget = target;
+                        }
                     }
+                    targets.add(suitableTarget);
                 }
                 if(targetPriorityArrays.get(1).size() > 0 && targets.size()<2) {
                     sortArrayByLength(targetPriorityArrays.get(1));
