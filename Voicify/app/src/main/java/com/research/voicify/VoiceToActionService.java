@@ -98,6 +98,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     ArrayList<TooltipRequiredNode> tooltipRequiredNodes = new ArrayList<>();
     int noOfLabels = 0;
     boolean isOn = false;
+    boolean hasExecuted = true;
     boolean skipPreviousRTECheck = false;
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
@@ -293,10 +294,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             setTextForAllSubNode(nodeInfo.getChild(i), depth + 1, text);
         }
     }
-
-
-
-
 
     public void scrollingActivity(String command){
         /**
@@ -713,6 +710,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             }
         }
 
+        if (currentSource == null) {return false;}
+
         //Find ALL of the nodes that match the "text" argument.
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
@@ -806,6 +805,10 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
     private void executeCommand(String sentence){
         String currentCommand = "";
+        if(!hasExecuted) {
+            return;
+        }
+
         Log.d(debugLogTag, "Current EXEC SEQ: " + currentSequence.toString());
 
         if(sentence.equals("") && currentSequence.size() == 0) {
@@ -813,7 +816,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             return;
         }
 
-        if(currentSequence.size() == 0){
+        if(!sentence.equals("")){
             skipPreviousRTECheck = true;
             Collections.addAll(currentSequence, sentence.split("and"));
             Log.d(debugLogTag, "New EXEC SEQ: " + currentSequence.toString());
@@ -826,45 +829,61 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             }
         }
 
-
-
         if(currentSequence.size() != 0) {
+            ActionTargetMatcher currentCommandMatcher;
             currentCommand = currentSequence.remove(0);
-            ActionTargetMatcher currentCommandMatcher = new ActionTargetMatcher(currentCommand, uiElements, appNames);
-            previousUIElements.clear();
-            previousUIElements.addAll(uiElements);
-            skipPreviousRTECheck = false;
-            Log.d(debugLogTag, "Executing: " + currentCommand + " RTEnv: " + uiElements.toString());
-            ArrayList<HashMap<ActionTargetMatcher.Action, ArrayList<String>>> actionTargetPairs = currentCommandMatcher.getCommandActionTargets();
-            Log.d(debugLogTag, "AT Pairs: "+ actionTargetPairs.toString());
+            if (currentCommand.contains("back")){
+                performGlobalAction(GLOBAL_ACTION_BACK);
 
-            if(actionTargetPairs.size() == 0){
-                skipPreviousRTECheck = true;
-                this.executeCommand("");
-                currentSequence.clear();
+            } else if (currentCommand.contains("home")) {
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            } else if (currentCommand.replace(" ","").contains("shutdownservice")){
+                Button listenBtn = mLayout.findViewById(R.id.listenBtn);
+                listenBtn.setText("Start");
+                isOn = false;
+                speechRecognizer.stopListening();           // on click listener to stop listening & processing data
+            } else {
+                currentCommandMatcher = new ActionTargetMatcher(currentCommand, uiElements, appNames);
+                previousUIElements.clear();
+                previousUIElements.addAll(uiElements);
+                skipPreviousRTECheck = false;
+                Log.d(debugLogTag, "Executing: " + currentCommand + " RTEnv: " + uiElements.toString());
+                ArrayList<HashMap<ActionTargetMatcher.Action, ArrayList<String>>> actionTargetPairs = currentCommandMatcher.getCommandActionTargets();
+                Log.d(debugLogTag, "AT Pairs: " + actionTargetPairs.toString());
+
+                if (actionTargetPairs.size() == 0) {
+                    skipPreviousRTECheck = true;
+                    this.executeCommand("");
+                    currentSequence.clear();
+                }
+
+                for (HashMap<ActionTargetMatcher.Action, ArrayList<String>> actionTargetPair : actionTargetPairs) {
+                    //Log.d(debugLogTag, actionTargetPair.toString());
+                    List<ActionTargetMatcher.Action> actionList = new ArrayList<ActionTargetMatcher.Action>(actionTargetPair.keySet());
+                    ActionTargetMatcher.Action currentAction = actionList.get(0);
+
+                    hasExecuted = false;
+                    // TODO: APP SUGGESTIONS
+                    if (currentAction == ActionTargetMatcher.Action.CLICK) {
+                        clickButtonByText(actionTargetPair.get(currentAction).get(0));
+                    } else if (currentAction == ActionTargetMatcher.Action.SCROLL) {
+                        scrollingActivity(actionTargetPair.get(currentAction).get(0)); // google
+                    } else if (currentAction == ActionTargetMatcher.Action.OPEN) {
+                        openApp(actionTargetPair.get(currentAction).get(0));
+                    } else if (currentAction == ActionTargetMatcher.Action.ENTER) {
+                        setTextForAllSubNode(currentSource, 0, actionTargetPair.get(currentAction).get(0));
+                    }
+                }
             }
-
-            for (HashMap<ActionTargetMatcher.Action, ArrayList<String>> actionTargetPair : actionTargetPairs) {
-                //Log.d(debugLogTag, actionTargetPair.toString());
-                List<ActionTargetMatcher.Action> actionList = new ArrayList<ActionTargetMatcher.Action>(actionTargetPair.keySet());
-                ActionTargetMatcher.Action currentAction = actionList.get(0);
-
-                // TODO: APP SUGGESTIONS
-                if (currentAction == ActionTargetMatcher.Action.CLICK) {
-                    clickButtonByText(actionTargetPair.get(currentAction).get(0));
-                } else if (currentAction == ActionTargetMatcher.Action.SCROLL) {
-                    scrollingActivity(actionTargetPair.get(currentAction).get(0)); // google
-                } else if (currentAction == ActionTargetMatcher.Action.OPEN) {
-                    openApp(actionTargetPair.get(currentAction).get(0));
-                }
-                else if (currentAction == ActionTargetMatcher.Action.ENTER) {
-                    setTextForAllSubNode(currentSource,0,actionTargetPair.get(currentAction).get(0));
-                }
+            hasExecuted = true;
+            try{
+                java.util.concurrent.TimeUnit.SECONDS.sleep(3); // emulates thread synchronisation
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
-
-
     }
+
 
     private void initializeSpeechRecognition() {
         /**
@@ -876,6 +895,8 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         // also available: LANGUAGE_MODEL_WEB_SEARCH
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        // setting the limit for the service to listen as an requirement for API30
+        speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100000);
 
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
 
@@ -910,7 +931,9 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 //Toast.makeText(MainActivity.this, "An error has occurred. Code: " + Integer.toString(error), Toast.LENGTH_SHORT).show();
                 if(error == 8 || error == 7) {
                     speechRecognizer.cancel();
-                    speechRecognizer.startListening(speechRecognizerIntent);
+                    if(isOn) {
+                        speechRecognizer.startListening(speechRecognizerIntent);
+                    }
                 }
             }
 
