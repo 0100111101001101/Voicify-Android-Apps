@@ -16,8 +16,10 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -25,6 +27,7 @@ import android.speech.SpeechRecognizer;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -92,6 +95,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     ArrayList<String> predefinedCommands = new ArrayList<>();
     ArrayList<String> currentSequence = new ArrayList<String>();
     AccessibilityNodeInfo currentSource;
+    AccessibilityNodeInfo previousSource;
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
     ArrayList<LabelFoundNode> foundLabeledNodes = new ArrayList<>();
@@ -148,9 +152,12 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         // basic checks for null safety
         AccessibilityNodeInfo source = event.getSource();
 
-        if (source == null) {
+        Log.d(debugLogTag,event.getEventType() + " ");
+
+        if (source == null && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             return;
         }
+        previousSource = source;
         if(isNotBlockedEvent()) {
             checkSettingsChanged();
             uiElements.clear();
@@ -160,7 +167,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             if(isOn) {
                 printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
             }
-            autoExecutePredefinedCommand();
             this.executeCommand("");
         }
     }
@@ -180,10 +186,18 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             createSwitch();
         }
     }
+    final Handler autoReloadHandler = new Handler();
+    final Runnable runnable = new Runnable() {
+        public void run() {
+            autoReload();
+            autoReloadHandler.postDelayed(this, 7500);
+
+        }
+    };
     public boolean isNotBlockedEvent(){
         Date date = new Date();
         long time = date.getTime();
-        if (time - currentTime > 500){
+        if (time - currentTime > 750){
             currentTime = time;
             return true;
         }
@@ -191,21 +205,13 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         return false;
     }
 
-    public void autoExecutePredefinedCommand(){
-        /**
-         * This function will be triggered to execute any predefined set of action that has been started.
-         */
-        if(isPlaying){  // check if any sequence is triggered
-            if(currentSequence.size() == 0){       // check if there is still element to execute
-                //Log.d(debugLogTag,"no more item to press");
-                isPlaying = false;      // finished the sequence
+    public void autoReload(){
+            AccessibilityManager manager = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (manager.isEnabled()) {
+                AccessibilityEvent e = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT);
+                manager.sendAccessibilityEvent(e);
+                Log.d(debugLogTag, "Auto Reloaded");
             }
-            else if(commandExecution(currentSequence.get(0))){ // execute the oldest
-                currentSequence.remove(0);     // remove it if successful
-                //Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
-                isPlaying = true;       // keep playing true for next invocation
-            }
-        }
     }
 
     public void getScrollableNode(AccessibilityNodeInfo currentNode){
@@ -377,6 +383,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         getDisplayMetrics();
         Log.d(debugLogTag,"Service Connected");
         loadAppNames();
+        autoReloadHandler.post(runnable);
     }
 
     private void getDisplayMetrics() {
@@ -743,20 +750,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         ArrayList<String> trimmedWords = new ArrayList<String>();
         // ["open","uber"...]
         //Log.d(debugLogTag,match);
-        if(predefinedCommands.contains(match.toLowerCase())){
-            String commands  = sharedPreferences.getString(match,null);
-            currentSequence.clear();
-            Collections.addAll(currentSequence, commands.split(";"));
-            if(currentSequence.size() == 0){
-                //Log.d(debugLogTag,"no more item to press");
-            }
-            else if(commandExecution(currentSequence.get(0))){
-                currentSequence.remove(0);
-                //Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
-                isPlaying = true;
-            }
-            return true;
-        }
+
 
         for (int index=0; index< words.length; index++) {
             String word = words[index].toLowerCase().trim();
@@ -809,6 +803,13 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             return;
         }
 
+        if(predefinedCommands.contains(sentence.toLowerCase().trim())){
+
+            String commands  = sharedPreferences.getString(sentence.toLowerCase().trim(),null);
+            sentence = commands.replaceAll(";"," and ");
+            Log.d(debugLogTag, "Loaded predefined commands: "+ sentence);
+        }
+
         Log.d(debugLogTag, "Current EXEC SEQ: " + currentSequence.toString());
 
         if(sentence.equals("") && currentSequence.size() == 0) {
@@ -856,7 +857,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                     this.executeCommand("");
                     currentSequence.clear();
                 }
-
                 for (HashMap<ActionTargetMatcher.Action, ArrayList<String>> actionTargetPair : actionTargetPairs) {
                     //Log.d(debugLogTag, actionTargetPair.toString());
                     List<ActionTargetMatcher.Action> actionList = new ArrayList<ActionTargetMatcher.Action>(actionTargetPair.keySet());
@@ -884,6 +884,9 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         }
     }
 
+    private void deepLinkRecognition(){
+
+    }
 
     private void initializeSpeechRecognition() {
         /**
@@ -948,6 +951,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 if (matches!=null) {
                     for (String match : matches) {
 //                        commandExecution(match);
+                        deepLinkRecognition();
                         executeCommand(match);
                         Log.d(debugLogTag,match);
                     }
