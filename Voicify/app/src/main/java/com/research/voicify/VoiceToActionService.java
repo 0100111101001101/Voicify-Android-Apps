@@ -852,9 +852,10 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 ArrayList<HashMap<ActionTargetMatcher.Action, ArrayList<String>>> actionTargetPairs = currentCommandMatcher.getCommandActionTargets();
                 Log.d(debugLogTag, "AT Pairs: " + actionTargetPairs.toString());
 
-                if (actionTargetPairs.size() == 0) {
+                if (actionTargetPairs.size() == 0 && !sentence.contains("match not found") && !sentence.contains("did you mean")) {
                     skipPreviousRTECheck = true;
-                    this.executeCommand("");
+                    this.speakerTask("Target match not found. ");
+                    //this.executeCommand("");
                     currentSequence.clear();
                 }
                 for (HashMap<ActionTargetMatcher.Action, ArrayList<String>> actionTargetPair : actionTargetPairs) {
@@ -862,16 +863,25 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                     List<ActionTargetMatcher.Action> actionList = new ArrayList<ActionTargetMatcher.Action>(actionTargetPair.keySet());
                     ActionTargetMatcher.Action currentAction = actionList.get(0);
 
+                    if(actionTargetPair.get(currentAction).size() > 1){
+                        this.speakerTask("Exact match not found. Did you mean "+ actionTargetPair.get(currentAction).get(0) + " or " +actionTargetPair.get(currentAction).get(1) + "?");
+                        skipPreviousRTECheck = true;
+                        //this.executeCommand("");
+                        currentSequence.clear();
+                        return;
+                    }
+
                     hasExecuted = false;
-                    // TODO: APP SUGGESTIONS
                     if (currentAction == ActionTargetMatcher.Action.CLICK) {
                         clickButtonByText(actionTargetPair.get(currentAction).get(0));
                     } else if (currentAction == ActionTargetMatcher.Action.SCROLL) {
-                        scrollingActivity(actionTargetPair.get(currentAction).get(0)); // google
+                        scrollingActivity(actionTargetPair.get(currentAction).get(0));
+                        skipPreviousRTECheck = true;
                     } else if (currentAction == ActionTargetMatcher.Action.OPEN) {
                         openApp(actionTargetPair.get(currentAction).get(0));
                     } else if (currentAction == ActionTargetMatcher.Action.ENTER) {
                         setTextForAllSubNode(currentSource, 0, actionTargetPair.get(currentAction).get(0));
+                        skipPreviousRTECheck = true;
                     }
                 }
             }

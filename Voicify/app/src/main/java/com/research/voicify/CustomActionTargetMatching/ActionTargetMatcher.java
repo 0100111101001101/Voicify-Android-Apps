@@ -3,6 +3,11 @@ import android.util.Log;
 
 import java.util.*;
 
+/**
+ * @author: Om Harish Mandavia (oman0003, 29145643)
+ * @implNote: last updated on 12/10/2021
+ */
+
 public class ActionTargetMatcher {
     public enum Action {
         CLICK,    // APP NAMES + UI Elements
@@ -21,21 +26,16 @@ public class ActionTargetMatcher {
     public static HashMap<Action,ArrayList<String>> actionSynonyms = new HashMap<Action,ArrayList<String>>();
     public static ArrayList<HashMap<Action, String>> actionTargetRangeList = new ArrayList<HashMap<Action, String>> ();
     public static ArrayList<String> appNames, uiElements;
-    String sentence = "";
+    public static String sentence = "";
 
     public ActionTargetMatcher(String sentence, ArrayList<String> uiElements, ArrayList<String> appNames) {
 
-        this.sentence = sentence;
+        this.sentence = this.cleanElements(sentence);
         this.uiElements = uiElements;
         this.appNames = appNames;
 
-        // STEP 1: Check synonyms, if absent, fetching synonyms from REST API & caching it
         fetchSynonyms();
-
-        // STEP 2: Cleaning all the possible UI Targets () and Commands for the algorithm
-        sentence = this.cleanElements(sentence);
-
-        getActionTriggers(sentence);
+        getActionTriggers(this.sentence);
     }
 
     /*
@@ -62,7 +62,7 @@ public class ActionTargetMatcher {
     @param: This is the string that will be used to handle symbols and articles.
     @return: It returns a string that is cleaned.
     */
-    private String cleanElements(String command){
+    private static String cleanElements(String command){
         ArrayList<String> articles = new ArrayList<String>(Arrays.asList("a","an","the")); // defining the 3 articles in english
         command = command.toLowerCase().trim();
         command = command.replaceAll("[^a-zA-Z0-9 ]", "");        // replaces characters not in regex
@@ -78,7 +78,7 @@ public class ActionTargetMatcher {
         return cleanStr;
     }
 
-    private String[] getScrollTargets() {
+    private static String[] getScrollTargets() {
         ScrollTarget[] scrollTargets = ScrollTarget.values();
         String[] targets = new String[scrollTargets.length];
 
@@ -89,7 +89,7 @@ public class ActionTargetMatcher {
         return targets;
     }
 
-    private HashMap<String,String> processTargets(ArrayList<String> uiElements, boolean addAppNames, boolean addUIElements){
+    private static HashMap<String,String> processTargets(ArrayList<String> uiElements, boolean addAppNames, boolean addUIElements){
         HashMap<String,String> targets = new HashMap<String,String>(); // initialising the array of all available elements
 
         // adding all the cleaned data to the available targets array
@@ -194,7 +194,7 @@ public class ActionTargetMatcher {
     /*
     @pre-cond: Needs cleaned command & targets (articles and symbols removed)
     */
-    private ArrayList<String> getTargetPossibilities(String command) {
+    private static ArrayList<String> getTargetPossibilities(String command) {
         String[] targets = command.split(" ");
         HashSet<String> targetPossibilities = new HashSet<String>();
         String multiWordPossibility = "";
@@ -215,22 +215,32 @@ public class ActionTargetMatcher {
         return new ArrayList<String> (targetPossibilities);
     }
 
-    private boolean isGrammarError(String target, String possibility) {
+    private static boolean grammarErrorAdmissibility(String target, int characterDifferenceThreshold){
+        String[] targetWords = target.split(" ");
+        for(String word : targetWords){
+            if (word.length() <= characterDifferenceThreshold){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isGrammarError(String target, String possibility) {
         // str1 = target (UI Elements / System Packages)
         // str2 = possibility (Command)
-        int characterDifferenceThreshold = 3;
-        int characterChangeThreshold = characterDifferenceThreshold - (Math.abs(target.length() - possibility.length()));
         int maxComparableLen = Math.min(target.length(), possibility.length());
+        int characterDifferenceThreshold = Math.min(3, (int) Math.floor(0.25*maxComparableLen));
+        int characterChangeThreshold = characterDifferenceThreshold - (Math.abs(target.length() - possibility.length()));
 
-        // allowing "PlayStore" - "Play Stores"  but not ("GooglePlay" - "Google Plus")
-        // A measure to support ()
+        if(!grammarErrorAdmissibility(target, characterDifferenceThreshold)) {
+            return false;
+        }
+
         boolean contiguousChange = false;
-
-        // allowing only one multiple position change (woman-women)
         boolean multiplePosChange = false;
 
 
-        if(maxComparableLen < (characterDifferenceThreshold+1)){
+        if(maxComparableLen <= (characterDifferenceThreshold+1)){
             return false;               // base case handling
         }
 
@@ -255,7 +265,7 @@ public class ActionTargetMatcher {
         return true;
     }
 
-    private boolean isAmbiguous(String target, String possibility) {
+    private static boolean isAmbiguous(String target, String possibility) {
         String[] targetWords = target.split(" ");
         for (String word : targetWords){
             if(possibility.length() == possibility.replaceFirst(word,"").length()){
@@ -303,15 +313,21 @@ public class ActionTargetMatcher {
         ArrayList<ArrayList<String>> validTargets = new ArrayList<ArrayList<String>>(Arrays.asList(new ArrayList<String>(),new ArrayList<String>(),new ArrayList<String>() ));
 
         for (String possibility : getTargetPossibilities(range)){
-            Log.d("FIT4003_VOICIFY", allTargetPossibilities.toString());
             for (String target : allTargetPossibilities.keySet()) {
-                // System.out.println("Possibility: "+possibility+ " Target: "+ target);
+                //Log.d("FIT4003_VOICIFY", "Possibility: "+possibility+ " Target: "+ target + target.replace(" ","").equals(possibility) + allTargets);
                 if(target.replace(" ","").equals(possibility)) {
                     if(!allTargets.contains(allTargetPossibilities.get(target))){
                         allTargets.add(allTargetPossibilities.get(target));
                         validTargets.get(0).add(allTargetPossibilities.get(target));
                     }
-                } else if(isGrammarError(target, possibility) || isAmbiguous(target,possibility)) {
+                }
+            }
+        }
+
+        for (String possibility : getTargetPossibilities(range)){
+            for (String target : allTargetPossibilities.keySet()) {
+                if(isGrammarError(target, possibility) || isAmbiguous(target,possibility)) {
+                    //System.out.println("Possibility: "+possibility+ " Target: "+ target + "grammar");
                     if(!allTargets.contains(allTargetPossibilities.get(target))){
                         allTargets.add(allTargetPossibilities.get(target));
                         validTargets.get(1).add(allTargetPossibilities.get(target));
@@ -323,12 +339,12 @@ public class ActionTargetMatcher {
         if(validTargets.get(0).size() == 0 && validTargets.get(1).size() == 0) {
             for (String possibility : getTargetPossibilities(range)){
                 for (String target : allTargetPossibilities.keySet()) {
-                    if(target.contains(possibility) && possibility.length()>= Math.floor(0.5*target.replace(" ", "").length()) && possibility.length() > 3) {
+                    if(target.replace(" ", "").contains(possibility) && possibility.length()>= Math.floor(0.5*target.replace(" ", "").length()) && possibility.length() > 3 && target.replace(" ", "").length() <= 15) {
                         if(!allTargets.contains(allTargetPossibilities.get(target))){
                             allTargets.add(allTargetPossibilities.get(target));
                             validTargets.get(2).add(allTargetPossibilities.get(target));
                         }
-                    } else if (target.contains(possibility) && possibility.length()>= Math.floor(0.3*target.replace(" ", "").length()) && possibility.length() > 3 && target.replace(" ", "").length() > 15) {
+                    } else if (target.replace(" ", "").contains(possibility) && possibility.length()>= Math.floor(0.3*target.replace(" ", "").length()) && possibility.length() > 3 && target.replace(" ", "").length() > 15) {
                         if(!allTargets.contains(allTargetPossibilities.get(target))){
                             allTargets.add(allTargetPossibilities.get(target));
                             validTargets.get(2).add(allTargetPossibilities.get(target));
@@ -350,7 +366,7 @@ public class ActionTargetMatcher {
         ArrayList<String> targets = new ArrayList<String>();
         HashMap<String,String> allTargetPossibilities = new HashMap<String,String>();
         ArrayList<ArrayList<String>> targetPriorityArrays = new ArrayList<ArrayList<String>>();
-        sentence = this.cleanElements(sentence);
+        sentence = cleanElements(sentence.replace(" ",""));
 
         if(action == Action.ENTER) {
             targets = getEnterText(range);
@@ -364,6 +380,7 @@ public class ActionTargetMatcher {
             }
 
             targetPriorityArrays = getAllValidTargets(allTargetPossibilities,range);
+            Log.d("FIT4003_VOICIFY",  targetPriorityArrays.toString());
 
             if(!includeAll){
                 if(targetPriorityArrays.get(0).size() > 0){
@@ -375,16 +392,30 @@ public class ActionTargetMatcher {
                     //   // }
                     //   targets.add(largestTarget);
                     // }
+//                    String suitableTarget = ".", suitableTargetClean = ".";
+//                    sortArrayByLength(targetPriorityArrays.get(0));
+//                    for(String target : targetPriorityArrays.get(0)){
+//                        Log.d("FIT4003_VOICIFY", sentence + " "+ suitableTarget + " "+ targetPriorityArrays.get(0).toString());
+//                        if(sentence.indexOf(suitableTargetClean)<sentence.indexOf(cleanElements(target))) {
+//                            suitableTargetClean = cleanElements(target);
+//                            suitableTarget = target;
+//                        }
+//                    }
+//                    targets.add(suitableTarget);
+
                     String suitableTarget = ".", suitableTargetClean = ".";
                     sortArrayByLength(targetPriorityArrays.get(0));
                     for(String target : targetPriorityArrays.get(0)){
-                        Log.d("FIT4003_VOICIFY", sentence + " "+ suitableTarget + " "+ targetPriorityArrays.get(0).toString());
-                        if(sentence.indexOf(suitableTargetClean)<sentence.indexOf(cleanElements(target))) {
+                        //Log.d("FIT4003_VOICIFY", sentence + " "+ suitableTarget + " "+ targetPriorityArrays.get(0).toString());
+                        if(sentence.indexOf(suitableTargetClean.replace(" ",""))<sentence.indexOf(cleanElements(target).replace(" ",""))) {
                             suitableTargetClean = cleanElements(target);
                             suitableTarget = target;
                         }
                     }
                     targets.add(suitableTarget);
+                    if(targetPriorityArrays.get(0).size() > 1){
+                        return targets;
+                    }
                 }
                 if(targetPriorityArrays.get(1).size() > 0 && targets.size()<2) {
                     sortArrayByLength(targetPriorityArrays.get(1));
