@@ -156,6 +156,10 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         if (source == null && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             return;
         }
+        if(previousSource!= null &&  source != null && (previousSource.hashCode() == source.hashCode() || previousSource.equals(source))){
+            Log.d(debugLogTag, "Blocked event");
+            return;
+        }
         previousSource = source;
         if(isNotBlockedEvent()) {
             checkSettingsChanged();
@@ -237,6 +241,9 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         if (nodeInfo == null) return;
         if(nodeInfo.isClickable()){
             String label = "";
+            Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+            nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+            if(rectTest.right < width && rectTest.bottom<height && rectTest.left > 0 && rectTest.top >0){
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
                      //Log.d(debugLogTag,"Available commands: " + label);
@@ -251,9 +258,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                         uiElements.add(foundLabel.toLowerCase());
                         noOfLabels+=1;
                     } else if (currentTooltipCount < 10){
-                        Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
-                        nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                         if(rectTest.right < width && rectTest.bottom<height){
                             //Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
                             inflateTooltip((rectTest.right+rectTest.left)/2, rectTest.top, nodeInfo);    // call function to create number tooltips
                         }
@@ -279,6 +283,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 concatenatedString += searchForTextView(currentNode.getChild(i),concatenatedString);    // recursive call
             }
         }
+
         return concatenatedString;
     }
 
