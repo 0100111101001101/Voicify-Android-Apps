@@ -425,6 +425,7 @@ public class ActionTargetMatcher {
                     }
                 }
                 if(targets.size()<2){
+                    sortArrayByLength(targetPriorityArrays.get(2));
                     for(String target: targetPriorityArrays.get(2)){
                         targets.add(target);
                         if(targets.size() >= 2) {break;}
