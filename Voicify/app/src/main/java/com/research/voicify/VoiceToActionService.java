@@ -871,16 +871,25 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                     }
 
                     hasExecuted = false;
+                    boolean isExecuted = false;
                     if (currentAction == ActionTargetMatcher.Action.CLICK) {
                         clickButtonByText(actionTargetPair.get(currentAction).get(0));
+                        isExecuted = true;
                     } else if (currentAction == ActionTargetMatcher.Action.SCROLL) {
                         scrollingActivity(actionTargetPair.get(currentAction).get(0));
                         skipPreviousRTECheck = true;
+                        isExecuted = true;
                     } else if (currentAction == ActionTargetMatcher.Action.OPEN) {
                         openApp(actionTargetPair.get(currentAction).get(0));
+                        isExecuted = true;
                     } else if (currentAction == ActionTargetMatcher.Action.ENTER) {
                         setTextForAllSubNode(currentSource, 0, actionTargetPair.get(currentAction).get(0));
                         skipPreviousRTECheck = true;
+                        isExecuted = true;
+                    }
+                    if(isRecording && isExecuted){
+                        Log.d(debugLogTag,"Duc" + currentCommand);
+                        savedCommands.add(currentCommand);
                     }
                 }
             }
