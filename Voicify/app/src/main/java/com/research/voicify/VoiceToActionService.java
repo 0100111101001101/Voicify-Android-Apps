@@ -152,7 +152,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         // basic checks for null safety
         AccessibilityNodeInfo source = event.getSource();
 
-        Log.d(debugLogTag,event.getEventType() + " ");
 
         if (source == null && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             return;
@@ -210,7 +209,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             if (manager.isEnabled()) {
                 AccessibilityEvent e = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT);
                 manager.sendAccessibilityEvent(e);
-                Log.d(debugLogTag, "Auto Reloaded");
+         //       Log.d(debugLogTag, "Auto Reloaded");
             }
     }
 
@@ -848,7 +847,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 previousUIElements.clear();
                 previousUIElements.addAll(uiElements);
                 skipPreviousRTECheck = false;
-                Log.d(debugLogTag, "Executing: " + currentCommand + " RTEnv: " + uiElements.toString());
+//                Log.d(debugLogTag, "Executing: " + currentCommand + " RTEnv: " + uiElements.toString());
                 ArrayList<HashMap<ActionTargetMatcher.Action, ArrayList<String>>> actionTargetPairs = currentCommandMatcher.getCommandActionTargets();
                 Log.d(debugLogTag, "AT Pairs: " + actionTargetPairs.toString());
 
@@ -892,10 +891,6 @@ public class VoiceToActionService extends AccessibilityService implements View.O
                 e.printStackTrace();
             }
         }
-    }
-
-    private void deepLinkRecognition(){
-
     }
 
     private void initializeSpeechRecognition() {
@@ -960,15 +955,18 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
                 if (matches!=null) {
                     for (String match : matches) {
-//                        commandExecution(match);
-                        deepLinkRecognition();
-                        executeCommand(match);
                         Log.d(debugLogTag,match);
+                        if(buttonAlgoItems[buttonAlgoTxt]){
+                            Log.d(debugLogTag,"Using custom Algo");
+                            executeCommand(match);
+                        } else {
+                            Log.d(debugLogTag,"Using  AutoML");
+                            autoMLRequest(match);
+                        }
                     }
                 }
                 speechRecognizer.startListening(speechRecognizerIntent);
             }
-
             @Override
             public void onPartialResults(Bundle partialResults) {
                 // Called when partial recognition results are available.
@@ -996,7 +994,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
 
     private void autoMLRequest(String command){
-        String token = "ya29.c.Kp8BEwhf60pUZW0RcdruH7f0Vs_L681dzPEbxFE9ddYyBE_ahoahIh0GAFJYc_Ue5iMa9cWWfQxKjQwCEMgMnAWQa0AtBjMGuO9Ws3JrXN1PFjTxWVd_kSAFRwcOoyCKdW6_kfyRQiL9lKgFcDgfXZ1w4eBSF27F9PzvjcMr-QSmARBs5pacZ2w-_fKZRZ96V-0AHim4RAyvcgBKgT6OK80H";
+        String token = "ya29.c.Kp8BFAjn21ijznPpm2s_MSYIWVxtw-RG8GtPGivsG18brZD9YeLCPgYAuKgncT5I--OH64tpT7Bky1SmcxP9q8v-wK3kiAgdymR9X7spw6LO1Lftw_xjdjCqF0YAhWEl8JJpoI2LNnlMtMbg2somJJrMgNQkHWZgAicThtGzYDfLhlOnKLostXTm3OO8L4ABLjk995FTPrUBptMdjn5NGk01";
         Interceptor headerInterceptor  = new Interceptor() {
             @Override
             public okhttp3.Response intercept(Chain chain) throws IOException {
@@ -1013,7 +1011,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        clientBuilder.addInterceptor(loggingInterceptor);
+        //clientBuilder.addInterceptor(loggingInterceptor);
         clientBuilder.addInterceptor(headerInterceptor);
         Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
                 .baseUrl("https://automl.googleapis.com/v1/")
@@ -1028,18 +1026,36 @@ public class VoiceToActionService extends AccessibilityService implements View.O
 
             @Override
             public void onResponse(Call<RespondBody> call, Response<RespondBody> response) {
-
-                RespondBody respondBody = response.body();   // get the body store data
+                String output = "";
+                RespondBody respondBody = response.body();
                 RespondBody.Payload[] payloads = respondBody.getPayload();
+                boolean isAction = false;
+                String action = "";
                 for(RespondBody.Payload payload1: payloads){
-                    Log.d(debugLogTag,   payload1.getDisplayName() + " " + payload1.textExtraction.textSegment.getContent()  );
-                    
-                }
-            }
+                    if(!isAction){
+                        if (payload1.getDisplayName().equals("Action")){
+                            action = payload1.textExtraction.textSegment.getContent();
 
+                            isAction = true;
+                        }
+                    } else if (!action.equals("")){
+                        output += " and " + action + " " +payload1.textExtraction.textSegment.getContent();
+                        action = "";
+                        isAction = false;
+                        }
+                }
+                if(output.length() > 0) {
+                    Log.d(debugLogTag,output.substring(4));
+                    executeCommand(output.substring(4));
+                } else {
+                    executeCommand(command);
+                }
+
+            }
             @Override
             public void onFailure(Call<RespondBody> call, Throwable t) {
-                Log.d(debugLogTag, t.getMessage());
+                Log.d(debugLogTag, t.getMessage() + " Error");
+
             }
         });
     }
