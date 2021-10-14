@@ -674,7 +674,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(!(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) {
                 Intent permissionIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+ getPackageName()));
-                startActivity(permissionIntent);
+                //startActivity(permissionIntent);
                 Toast.makeText(this,"Please enable microphone access and relaunch.",Toast.LENGTH_LONG).show();
             }
 
