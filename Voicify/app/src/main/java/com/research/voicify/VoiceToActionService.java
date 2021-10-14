@@ -193,7 +193,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
     final Runnable runnable = new Runnable() {
         public void run() {
             autoReload();
-            autoReloadHandler.postDelayed(this, 7500);
+            autoReloadHandler.postDelayed(this, 3000);
 
         }
     };
@@ -243,7 +243,7 @@ public class VoiceToActionService extends AccessibilityService implements View.O
             String label = "";
             Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
             nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-            if(rectTest.right < width && rectTest.bottom<height && rectTest.left > 0 && rectTest.top >0){
+            if(rectTest.right -100 < width && rectTest.bottom-100<height && rectTest.left+100 > 0 && rectTest.top+100 >0){
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
                      //Log.d(debugLogTag,"Available commands: " + label);
