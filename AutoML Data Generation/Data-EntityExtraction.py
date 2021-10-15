@@ -2,7 +2,7 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-
+# list of all the application names
 normal_app_names = [
     "UberEats",
     "Swiggy",
@@ -33,6 +33,7 @@ normal_app_names = [
 
 ]
 
+# faulty names of some applications
 faulty_app_names = [
     'musics player',
     'musical player',
@@ -47,6 +48,7 @@ faulty_app_names = [
 
 ]
 
+# adding unnecessary words to some applications names
 unnecessary_word_app_names = [
     'Facebook Messenger',
     'Asana project management app',
@@ -59,6 +61,7 @@ unnecessary_word_app_names = [
 
 ]
 
+# application which consists of more than one word
 multi_word_apps = [
     'Mapfactor Navigator'
     'Scout GPS',
@@ -76,14 +79,17 @@ multi_word_apps = [
     'AutoSleep Track Sleep on Watch',
 ]
 
+# actions performed by the user
 click_actions = [
     'click', 'tap', 'touch'
 ]
 
+# actions performed by the user to launch an application
 open_actions = [
     'open', 'launch', 'start'
 ]
 
+# actions performed by the user to scroll screen up, down, left and right
 scroll_actions = [
     'scroll up',
     'swipe up',
@@ -95,13 +101,17 @@ scroll_actions = [
     'swipe right',
 ]
 
+# actions to fill or search some texts
 enter_actions = [
     'enter', 'search', 'find', 'look up',
 ]
 
+# plurals of words
 plurals = [
     "buses", "boxes", "boats", "women", "children", "cinemas", "hoodies"
 ]
+
+# list of food and location
 locations = [
     'Fish and chips',
     'Hamburger',
@@ -143,14 +153,17 @@ locations = [
     'Fast food'
 ]
 
+# a list of all application
 all_apps = [*normal_app_names, *multi_word_apps, *faulty_app_names, *unnecessary_word_app_names]
 
+# list of articles
 articles = [
     'a',
     'an',
     'the'
 ]
 
+# list of fillers that might be used in a sentence
 fillers = [
     'Hey',
     'I',
@@ -167,6 +180,7 @@ fillers = [
 
 ]
 
+# list of items
 items = [
     'clothes',
     'grocery',
@@ -180,35 +194,40 @@ items = [
     'juice'
 ]
 
+# list of conjunctions
 conjunctions = [
     "or", "and", "not", "then", "after that"
 ]
 
-
+# creates data out of several lists.
 def data_create():
+    """
+    This function creates data by combining different app names with items and other lists
+
+    :return: returns a list 'outputStr' which consist of different commands generated from this following function
+    """
     outputStr = []
     index = 0
     for app in normal_app_names:
         for word2 in open_actions:
             for word3 in items:
                 string = word2 + " " + word3 + " from " + app
-                if index // 22 == 0:
+                if index % 22 == 0:
                     string += string + "s"
 
-                elif index // 24 == 0:
+                elif index % 24 == 0:
                     string += string + "es"
 
-                if index // 27 == 0:
+                if index % 27 == 0:
                     string = word2 + " " + word3 + " from the " + app
 
-                elif index // 26 == 0:
+                elif index % 26 == 0:
                     string = word2 + " " + word3 + " from a " + app
                 index += 1
-                # outputStr.append(string)
+
         for word2 in open_actions:
             for word4 in items:
                 string = word2 + " " + app + ' and then ' + word2 + ' down and search ' + word4
-                # outputStr.append(string)
 
     # open (App name) app
     counter = 0
@@ -270,6 +289,7 @@ def data_create():
                                  swipe_counter % len(enter_actions)] + " " + items[
                                  counter % len(items)] + " " +  conjunctions[swipe_counter % len(conjunctions)] + " from " + locations[search_counter % len(locations)]
                 outputStr.append(string)
+
     # plurals
     for enter_word in enter_actions:
         for app in normal_app_names:
@@ -282,7 +302,6 @@ def data_create():
                     string = enter_word + " " + noun + " in " + app
                     outputStr.append(string)
 
-    print(len(outputStr))
     return outputStr
 
 
@@ -315,6 +334,7 @@ def entity_analysis(content, doc):
     value = str(finalOutput)
     doc.write(str(value))
 
+
 def clean_data2(unclean_data):
 
     data = []
@@ -324,10 +344,6 @@ def clean_data2(unclean_data):
         if unclean_data.find(word) != -1:
             entity = "Click Action"
             data.append((entity,unclean_data.find(word),unclean_data.find(word)+len(word)))
-            # print(unclean_data)
-            # print((unclean_data.find(word1)))
-            # print(unclean_data.find(word1)+len(word1))
-
 
     for word in scroll_actions:
         if unclean_data.find(word) != -1:
@@ -548,8 +564,18 @@ def clean_data(unclean_data):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+
+    # create a data-set
     dataset = data_create()
-    # test = "Hey I like android development so can you please launch UberEATS we google about the proposal"
+
+    # real life commands
+    dataset.append("Open Maps and search Melbourne")
+    dataset.append("Open Uber Eats and order pasta")
+    dataset.append("Scroll up and open Doordash")
+    dataset.append("Search batman")
+    dataset.append("Order McChicken from McDonalds")
+
+    # putting everything in a file
     file = open('label_data.jsonl', 'w', encoding='utf-8')
     for commands in dataset:
         entity_analysis(commands, file)
