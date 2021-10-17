@@ -64,7 +64,6 @@ class Main {
     //Pair<String, String> keyValue = new ImmutablePair("key", "value");
 
 
-
     /**
     This method is used to mock an API Call from Synonyms REST API.
 
@@ -357,19 +356,209 @@ class Main {
     public static void main(String[] args) {
         // catches: google and play store are two different words & apps, open & start are both trigger words, "the" after a trigger statement, use of plural instead of singular, multiple trigger words.
         // expected: Suggest Google or Play Store
-        String sentence1 = "Hey I can start you so can you please open the google play stores and after that maybe I can start working on the proposal";
+        String sentence48 = "Hey I can start you so can you please open the google play stores and after that maybe I can start working on the proposal";
         //String sentence1 = "open the google play stores";
 
 
         // catches: start is a trigger statement and youtube is in the threshold but it shall not be opened, downloader has a trigger word load and google which is an app name is within the threshold, NLP may not be able to recognise "Music downloader" as an app but would rather return "Music" as a app, "the" after a trigger statement, Multiple app possibility, plural usage.
         // expected: open Music downloader
-        String sentence2 = "I can start you but ignore youtube and google some stuff after that launch the Google Map then tap on search here and search kfc and swipe down";
+        String sentence49 = "I can start you but ignore youtube and google some stuff after that launch the Google Map then tap on search here and search kfc and swipe down";
 
         // catches: launch is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word.
         // expected: launch smart launcher
-        String sentence3 = "Hey I like android development so can you please launch smart launcher we google about the proposal";
+        String sentence50 = "Hey I like android development so can you please launch smart launcher we google about the proposal";
 
+        // catches: launch is a trigger word
+        // expected: launch google
+        String sentence1 = "Launch google";
 
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word.
+        // expected: ask to open google, or playstore
+        String sentence2 = "Open Google Play store";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. There is an article after trigger word
+        // expected: open google maps
+        String sentence3 = "Open the Google Maps";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. The name of the application is wrong but more than 30% match of app string should provide the relevant options
+        // expected: open musics, musics downloader
+        String sentence4 = "Open Musicals Player";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. Contains two app names after trigger word.
+        // expected: open messenger, facebook
+        String sentence5 = "Open Facebook Messenger";
+
+        // catches: swipe is a trigger word, a direction is given after the trigger word to scroll right
+        // expected: should scroll right
+        String sentence6 = "Swipe Right";
+
+        // catches: launch is a trigger word, an app name is in the 50 char threshold range of the trigger word. It is handling a multiword app
+        // expected: open uber eats
+        String sentence7 = "Launch Uber Eats";
+
+        // catches: open is a trigger word. There are two application names after the trigger word. Both applications are joint by a conjuction.
+        // expected: open uber eats or deliveroo
+        String sentence8 = "Open UberEats or Deliveroo";
+
+        // catches: contains two trigger words and an app name
+        // expected: start uber eats
+        String sentence9 = "open start Uber Eats";
+
+        // catches: open is the trigger word, contains 3 trigger words and 3 application
+        // expected: --
+        String sentence10 = "Open Musical Player open musics player open store open musics";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. There are two article after trigger word
+        // expected: open doordash
+        String sentence11 = "Open the the Doordash";
+
+        // catches: launch is a trigger word, an app name is in the 50 char threshold range of the trigger word. App name is wrongly spelt. It is pluralised
+        // expected: launch uber eats
+        String sentence12 = "Launch uber eat umm yes haha";
+
+        // catches: launch is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. Contains a lot of unnecessary details about the application
+        // expected: launch asana
+        String sentence13 = "Launch the asana project management app";
+
+        // catches: contains two trigger words and single application name
+        // expected: start google maps
+        String sentence14 = "Click Start Google Maps";
+
+        // catches: launch is a trigger word and the contains two app names which are not joined by a conjunction
+        // expected: -
+        String sentence15 = "Launch Uber eats doordash";
+
+        // catches: open is a trigger word, consist of two app names and a subject all joined by conjunctions 
+        // expected: -
+        String sentence16 = "Open UberEats or Deliveroo and order a big mac but not from McDonald's Clayton";
+
+        // catches: start is a trigger word, an app name is in the 50 char threshold range of the trigger word. There are two article after trigger word. The app name is wrong, so there should be over 30% match 
+        // expected: did you mean doordash?
+        String sentence17 = "Start a doortrash";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. The multiple word app name is joined to be one
+        // expected: open uber eats
+        String sentence18 = "open ubereats";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. The second command is enter 24 mchicken nuggets
+        // expected: open doordash and enter 24 mcchicken nuggets. Doordash spelling has been altered.
+        String sentence19 = "open door dash and enter 24 mcchicken nuggets";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. Asks to open the following applications.
+        // expected: open facebook, messenger, google, playstore
+        String sentence20 = "Open the Facebook messenger and open Google play store";
+
+        // catches: open is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. There is a article and app name is google playstore
+        // expected: open google, playstore
+        String sentence21 = "open a google play store";
+
+        // catches: launch is a trigger word, an app name is in the 50 char threshold range of the trigger word. The app name is ambiguous thus asks to open application which has more than 30% match
+        // expected: launch playstore, samsung store, ...
+        String sentence22 = "Launch store";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. The Uber eat spelling is wrong 
+        // expected: open uber eats and enter 24 nuggets
+        String sentence23 = "open Uber Eat and enter 24 nuggets";
+
+        // catches: open is a trigger word, an app name is in the 50 char threshold range of the trigger word. There is an article after trigger word
+        // expected: open maps, google maps
+        String sentence24 = "start a Maps";
+
+        // catches: start is a trigger word, an app name is in the 50 char threshold range of the trigger word. There is another trigger word search and subject home
+        // expected: start google maps and search home
+        String sentence25 = "start google maps and search home";
+
+        // catches: launch is a trigger word, an app name is in the 50 char threshold range of the trigger word. The spelling of the application is wrong. There si another trigger word open which is followed by amazon application.
+        // expected: -
+        String sentence26 = "launch google map and open amazon application";
+
+        // catches: launch is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. Two trigger words and 4 possible application thatg needs to be opened
+        // expected: launch Facebook, Messenger and open Maps, google maps
+        String sentence27 = "launch Facebook Messenger and open Maps";
+
+        // catches: start is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. It has a article after the trigger word
+        // expected: start google maps
+        String sentence28 = "start a Google maps";
+        
+        // catches: open is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. Has conjunction.
+        // expected: open doordash, uber eats
+        String sentence29 = "Open doordash or Uber Eats";
+
+        // catches: start is the trigger word, engine is not an application. There is another trigger word open which is joined to the first command through conjunction and is followed by messeger.
+        // expected: open messenger
+        String sentence30 = "start the engine and open messenger";
+
+        // catches: open is the trigger word which is followed by messenger which is an application. It has also a lot of words which are not required.
+        // expected: open messenger
+        String sentence31 = "Hey, this is great, ill open messenger to text you";
+
+        // catches: open, scroll and enter are the trigger words. They are followed by an application or an action. It has 2 conjunction.
+        // expected: open google maps, scroll down, enter home
+        String sentence32 = "Open Google Maps and then scroll down and enter home";
+
+        // catches: open is the trigger word which is followed by ubereats and deliveroo which is an application. It has alot of conjunction such as not and 'and' and or.
+        // expected: open messenger
+        String sentence33 = "Open UberEats or Deliveroo and order a big mac but not from McDonald's Clayton";
+
+        // catches: open is the trigger word which is followed by google which is an application. it also has another trigger word fill which is followed by home 
+        // expected: open google, fill home
+        String sentence34 = "open Google and fill home";
+
+        // catches: swipe and open are th trigger words, they are followed by an action  and a ambiguous app name.
+        // expected: swipe right, open google maps, maps
+        String sentence35 = "Swipe right and breaking open maps";
+
+        // catches: open is the trigger word which is followed by moogle traps which is an application. It is spelled absolutely wrong.
+        // expected: open google maps
+        String sentence36 = "open Moogle Traps";
+
+        // catches: launch is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. The spelling of the application is wrong. 
+        // expected: launch google maps, swipe right
+        String sentence37 = "launch moogle traps or swipe right";
+
+        // catches: no trigger word, enter big mac inside uber eats application
+        // expected: -
+        String sentence38 = "enter big mac from Uber Eats";
+
+        // catches: start, launch are the trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. Two trigger words and 4 possible application thatg needs to be opened
+        // expected: start Facebook, Messenger and open Maps, google maps
+        String sentence39 = "Start launch a Facebook Messenger or a Maps";
+
+        // catches: open is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. Uses a conjunction or.
+        // expected: open doordash, uber eats
+        String sentence40 = "Open Moordash or Suber beats";
+
+        // catches: open, launch are the trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word.
+        // expected: launch google maps
+        String sentence41 = "open launch google maps";
+
+        // catches: open, launch are the trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. It si also followed by an article
+        // expected: launch google maps
+        String sentence42 = "Open launch a google maps";
+
+        // catches: start is a trigger word and the app name contains a trigger word, an app name is in the 50 char threshold range of the trigger word. The spelling of the application is wrong. Also involves an article.
+        // expected: start asana
+        String sentence43 = "Start an Ahana";
+
+        // catches: start and open are the trigger word, app name is in the 50 char threshold range of the trigger word. The spelling of doordash and uber eats is wrong. There is an article after open. The sentences are joined by an conjunction.
+        // expected: start doordash, open uber eat
+        String sentence44 = "Hey maybe start Doormash and open the Uber Eat";
+
+        // catches: No trigger word. Just faulty app name.
+        // expected:-
+        String sentence45 = "Musics Player";
+
+        // catches: No trigger word. two application name and a conjunction
+        // expected:-
+        String sentence46 = "Uber eats not from doordash";
+
+        // catches: No trigger word. Just app name with an article.
+        // expected:-
+        String sentence47 = "a uber eats";
+
+        // catches: No trigger word. Just app name without any spaces.
+        // expected:-
+        String sentence51 = "Ubereats";
 
     /*
     Cleaning a string refers to the following,
@@ -387,6 +576,55 @@ class Main {
         sentence1 = cleanElements(sentence1);
         sentence2 = cleanElements(sentence2);   // cleaning the command
         sentence3 = cleanElements(sentence3);
+        sentence4 = cleanElements(sentence4);
+        sentence5 = cleanElements(sentence5);
+        sentence6 = cleanElements(sentence6);
+        sentence7 = cleanElements(sentence7);
+        sentence8 = cleanElements(sentence8);
+        sentence9 = cleanElements(sentence9);
+        sentence10 = cleanElements(sentence10);
+        sentence11 = cleanElements(sentence11);
+        sentence12 = cleanElements(sentence12);
+        sentence13 = cleanElements(sentence13);
+        sentence14 = cleanElements(sentence14);
+        sentence15 = cleanElements(sentence15);
+        sentence16 = cleanElements(sentence16);
+        sentence17 = cleanElements(sentence17);
+        sentence18 = cleanElements(sentence18);
+        sentence19 = cleanElements(sentence19);
+        sentence20 = cleanElements(sentence20);
+        sentence21 = cleanElements(sentence21);
+        sentence22 = cleanElements(sentence22);
+        sentence23 = cleanElements(sentence23);
+        sentence24 = cleanElements(sentence24);
+        sentence25 = cleanElements(sentence25);
+        sentence26 = cleanElements(sentence26);
+        sentence27 = cleanElements(sentence27);
+        sentence28 = cleanElements(sentence28);
+        sentence29 = cleanElements(sentence29);
+        sentence30 = cleanElements(sentence30);
+        sentence31 = cleanElements(sentence31);
+        sentence32 = cleanElements(sentence32);
+        sentence33 = cleanElements(sentence33);
+        sentence34 = cleanElements(sentence34);
+        sentence35 = cleanElements(sentence35);
+        sentence36 = cleanElements(sentence36);
+        sentence37 = cleanElements(sentence37);
+        sentence38 = cleanElements(sentence38);
+        sentence39 = cleanElements(sentence39);
+        sentence40 = cleanElements(sentence40);
+        sentence41 = cleanElements(sentence41);
+        sentence42 = cleanElements(sentence42);
+        sentence43 = cleanElements(sentence43);
+        sentence44 = cleanElements(sentence44);
+        sentence45 = cleanElements(sentence45);
+        sentence46 = cleanElements(sentence46);
+        sentence47 = cleanElements(sentence47);
+        sentence48 = cleanElements(sentence48);
+        sentence49 = cleanElements(sentence49);
+        sentence50 = cleanElements(sentence50);
+        sentence51 = cleanElements(sentence51);
+
         // clean synonyms?
 
         // STEP 3: Extracting information / assigning meaning
@@ -402,22 +640,398 @@ class Main {
         System.out.println("\nMatches:");
         getActionTargetMap();
 
-        // System.out.println("\n\nSentence 2 Extraction:");
-        // System.out.println("\nActions Extraction:");
-        // System.out.println(getActionTriggers(sentence2));
-        // System.out.println("\nActions & Target Range:");
-        // System.out.println(actionTargetRangeList);
-        // System.out.println("\nMatches:");
-        // getActionTargetMap();
-
-
-        System.out.println("\n\nSentence 3 Extraction:");
+        System.out.println("\n\nSentence 2 Extraction:");
         System.out.println("\nActions Extraction:");
-        System.out.println(getActionTriggers(sentence3));
+        System.out.println(getActionTriggers(sentence2));
         System.out.println("\nActions & Target Range:");
         System.out.println(actionTargetRangeList);
         System.out.println("\nMatches:");
         getActionTargetMap();
+
+        System.out.println("\n\nSentence 4 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence4));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 5 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence5));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 6 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence6));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 7 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence7));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 8 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence8));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 9 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence9));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 10 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence10));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 11 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence11));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 12 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence12));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 13 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence13));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 14 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence14));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 15 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence15));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 16 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence16));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 17 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence17));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 18 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence18));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 19 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence19));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 20 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence20));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 21 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence21));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 22 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence22));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 23 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence23));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 24 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence24));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 25 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence25));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 26 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence26));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 27 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence27));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 28 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence28));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 29 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence29));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 30 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence30));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 31 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence31));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 32 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence32));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 33 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence33));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 34 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence34));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 35 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence35));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 36 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence36));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 37 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence37));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 38 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence38));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 39 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence39));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 40 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence40));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 41 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence41));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 42 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence42));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 43 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence43));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 44 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence44));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 45 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence45));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 46 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence46));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 47 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence47));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 48 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence48));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 49 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence49));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 50 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence50));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
+        System.out.println("\n\nSentence 51 Extraction:");
+        System.out.println("\nActions Extraction:");
+        System.out.println(getActionTriggers(sentence51));
+        System.out.println("\nActions & Target Range:");
+        System.out.println(actionTargetRangeList);
+        System.out.println("\nMatches:");
+        getActionTargetMap();
+
 
         System.out.println(getActionTargetMap());
         // System.out.println("\n\n");
