@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.research.voicify">
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
@@ -11,7 +12,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Voicify">
+        android:theme="@style/Theme.Voicify"
+        tools:ignore="ExtraText">
         <activity android:name=".MainActivity">
 
             <intent-filter>
@@ -40,16 +42,6 @@
 
         </activity>
         <activity
-        android:name=".GoogleNLU.NLUDisplayActivity"
-        android:label="GoogleNLU"
-            >
-        </activity>
-        <activity
-            android:name=".AppOpenerActivity"
-            android:label="AppOpener"
-            >
-        </activity>
-        <activity
             android:name=".deeplink.DeepLinkAdd"
             android:label="DeepLinkAdd"
             >
@@ -57,6 +49,11 @@
         <activity
             android:name=".deeplink.DeepLinkList"
             android:label="DeepLinkList"
+            >
+        </activity>
+        <activity
+            android:name=".SettingsActivity"
+            android:label="SettingsActivity"
             >
         </activity>
         <service
@@ -73,7 +70,6 @@
 
         // Creating service for TextToSpeechService
         <service android:name=".TTSService" />
-
     </application>
 
     <queries>

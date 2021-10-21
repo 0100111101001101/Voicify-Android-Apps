@@ -9,12 +9,17 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -22,25 +27,33 @@ import android.speech.SpeechRecognizer;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
+import com.research.voicify.CustomActionTargetMatching.ActionTargetMatcher;
+import com.research.voicify.GoogleNLU.GoogleAutoML;
+import com.research.voicify.GoogleNLU.RequestBody;
+import com.research.voicify.GoogleNLU.RespondBody;
 import com.research.voicify.elements.LabelFoundNode;
 import com.research.voicify.elements.TooltipRequiredNode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -51,54 +64,84 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 import java.util.Set;
-import java.util.Calendar;
+
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, ), Alex Dumitru(adum6, 27820289)
- * @version: V1.1
- * @implNote: last updated on 15/08/2021
+ * @author: Om Harish Mandavia (oman0003, 29145643), Minh Duc Vu (mvuu0003, 29068215), Alex Dumitru(adum6, 27820289)
+ * @version: V1.8
+ * @implNote: last updated on 09/10/2021
  */
 
 
 @RequiresApi(api = Build.VERSION_CODES.R)
-public class VoiceToActionService extends AccessibilityService {
+public class VoiceToActionService extends AccessibilityService implements View.OnTouchListener{
     final String FILE_NAME = "voicify";
     final String ALL_COMMANDS = "all_commands";
     int width,height;
+
+    ArrayList<String> uiElements = new ArrayList<String>();
+    ArrayList<String> previousUIElements = new ArrayList<String>();
+    ArrayList<String> appNames = new ArrayList<String>();
+
     SharedPreferences sharedPreferences;
     ArrayList<String> predefinedCommands = new ArrayList<>();
     ArrayList<String> currentSequence = new ArrayList<String>();
-    AccessibilityNodeInfo currentSource = new AccessibilityNodeInfo();
+    AccessibilityNodeInfo currentSource;
+    AccessibilityNodeInfo previousSource;
     ArrayList<AccessibilityNodeInfo> scrollableNodes = new ArrayList<AccessibilityNodeInfo>();
     FrameLayout mLayout;
     ArrayList<LabelFoundNode> foundLabeledNodes = new ArrayList<>();
     ArrayList<TooltipRequiredNode> tooltipRequiredNodes = new ArrayList<>();
+    int noOfLabels = 0;
     boolean isOn = false;
+    boolean hasExecuted = true;
+    boolean skipPreviousRTECheck = false;
     SpeechRecognizer speechRecognizer;                      // declaring speech recognition var
     Intent speechRecognizerIntent;
-    String debugLogTag= "FIT4003_VOICIFY";                  // use this tag for all log tags.
+    String debugLogTag = "FIT4003_VOICIFY";                  // use this tag for all log tags.
     ArrayList<String> launchTriggers = new ArrayList<String>(Arrays.asList("load","start","launch","execute","open"));
     String[] pressTriggers = new String[]{"press","click"};
+
+    // Defining window manager for overlay elements and switchBar
     WindowManager wm;
+    WindowManager.LayoutParams switchBar; // stores layout parameters for movable switchBar
+
+
+    String[] tooltipColorSpinnerItems = new String[]{"#64b5f6","#2b2b2b","#ff4040"};
+    int[] tooltipSizeSpinnerItems = new int[]{14,18,22};
+    int[] tooltipOpacitySpinnerItems = new int[]{250,220,170,120};
+    int[] buttonOpacitySpinnerItems = new int[]{250,220,170,120};
+    boolean[] buttonRecordItems = new boolean[]{false,true};
+    boolean[] buttonAlgoItems = new boolean[]{true,false};
+
+    int tooltipColor = 0 ;
+    int tooltipSize = 0;
+    int tooltipOpacity = 0;
+    int buttonOpacity = 0;
+    int buttonRecordTxt = 0;
+    int buttonAlgoTxt = 0;
     long currentTime;
-    //Creating HashMap for TTS phrases these are used as shortcuts for common Text-to-speech strings
-    private static final Map<String,String> speechPrompt=new HashMap<String,String>();
-    static {
-        speechPrompt.put("required","Please fill in the required fields");
-        speechPrompt.put("multiple","Multiple options detected, which did you want to select?");
-        speechPrompt.put("noInput","I'm sorry, can you please repeat that");
-        speechPrompt.put("noMatch","I'm sorry, I couldn't find ");
-        speechPrompt.put("open","Opening ");
-        speechPrompt.put("scrollUp","Scrolling up");
-        speechPrompt.put("scrollDown","Scrolling down");
-        speechPrompt.put("stop", "Stopping voicify");
-    }
+
+    // variable for switch bar coordinates
+    private int initialX;
+    private int initialY;
+    private float initialTouchX;
+    private float initialTouchY;
 
     ArrayList<String> savedCommands = new ArrayList<>();
-
-    private int currentTooltipCount = 0;
+    private int currentTooltipCount = 1;
     boolean isRecording = false;
     boolean isPlaying = false;
+
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         /**
@@ -109,44 +152,69 @@ public class VoiceToActionService extends AccessibilityService {
         // basic checks for null safety
         AccessibilityNodeInfo source = event.getSource();
 
-        if (source == null) {
+
+        if (source == null && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             return;
         }
+        if(previousSource!= null &&  source != null && (previousSource.hashCode() == source.hashCode() || previousSource.equals(source))){
+            Log.d(debugLogTag, "Blocked event");
+            return;
+        }
+        previousSource = source;
         if(isNotBlockedEvent()) {
+            checkSettingsChanged();
+            uiElements.clear();
+            noOfLabels = 0;
             removeAllTooltips();    // remove all old  tooltip when screen changed
             currentSource = getRootInActiveWindow(); // update the current root node
-            printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
-            autoExecutePredefinedCommand();
+            if(isOn) {
+                printOutAllClickableElement(getRootInActiveWindow(), 0, event); // call function for root node
+            }
+            this.executeCommand("");
         }
-
     }
 
+    public void checkSettingsChanged(){
+        tooltipColor = sharedPreferences.getInt(SettingsActivity.TOOLTIP_COLOR,0);
+        tooltipSize = sharedPreferences.getInt(SettingsActivity.TOOLTIP_SIZE,0);
+        tooltipOpacity = sharedPreferences.getInt(SettingsActivity.TOOLTIP_OPACITY,0);
+        int previousBtnOpacity = buttonOpacity;
+        int previousBtnRecord = buttonRecordTxt;
+        int previousBtnAlgo = buttonAlgoTxt;
+        buttonOpacity = sharedPreferences.getInt(SettingsActivity.BUTTON_OPACITY,0);
+        buttonRecordTxt = sharedPreferences.getInt(SettingsActivity.BUTTON_RECORD,0);
+        buttonAlgoTxt = sharedPreferences.getInt(SettingsActivity.BUTTON_ALGO,0);
+        if(previousBtnOpacity != buttonOpacity ||buttonRecordTxt != previousBtnRecord){
+            wm.removeView(mLayout);
+            createSwitch();
+        }
+    }
+    final Handler autoReloadHandler = new Handler();
+    final Runnable runnable = new Runnable() {
+        public void run() {
+            autoReload();
+            autoReloadHandler.postDelayed(this, 3000);
+
+        }
+    };
     public boolean isNotBlockedEvent(){
         Date date = new Date();
         long time = date.getTime();
-        if (time - currentTime > 500){
+        if (time - currentTime > 750){
             currentTime = time;
             return true;
         }
-        Log.d(debugLogTag, "Event blocked for repetitive calls");
+        //Log.d(debugLogTag, "Event blocked for repetitive calls");
         return false;
     }
 
-    public void autoExecutePredefinedCommand(){
-        /**
-         * This function will be triggered to execute any predefined set of action that has been started.
-         */
-        if(isPlaying){  // check if any sequence is triggered
-            if(currentSequence.size() == 0){       // check if there is still element to execute
-                Log.d(debugLogTag,"no more item to press");
-                isPlaying = false;      // finished the sequence
+    public void autoReload(){
+            AccessibilityManager manager = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (manager.isEnabled()) {
+                AccessibilityEvent e = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT);
+                manager.sendAccessibilityEvent(e);
+         //       Log.d(debugLogTag, "Auto Reloaded");
             }
-            else if(commandExecution(currentSequence.get(0))){ // execute the oldest
-                currentSequence.remove(0);     // remove it if successful
-                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
-                isPlaying = true;       // keep playing true for next invocation
-            }
-        }
     }
 
     public void getScrollableNode(AccessibilityNodeInfo currentNode){
@@ -173,23 +241,25 @@ public class VoiceToActionService extends AccessibilityService {
         if (nodeInfo == null) return;
         if(nodeInfo.isClickable()){
             String label = "";
+            Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
+            nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
+            if(rectTest.right -100 < width && rectTest.bottom-100<height && rectTest.left+100 > 0 && rectTest.top+100 >0){
                 if (nodeInfo.getText() != null) {   // check if node has a corresponding text
                     label += nodeInfo.getText();
-                     Log.d(debugLogTag,"Available commands: " + label);
+                     //Log.d(debugLogTag,"Available commands: " + label);
+                    uiElements.add(label);
                     return;
                 } else {
                     // no information about node or event (Tags to be assigned!)
                     String foundLabel  = searchForTextView(nodeInfo,"");
-                    if (!foundLabel.equals("")){
+                    if (!foundLabel.equals("") && noOfLabels < 10){
                         foundLabeledNodes.add(new LabelFoundNode(nodeInfo,foundLabel.toLowerCase()));
-                        Log.d(debugLogTag,"Available commands: " +foundLabel.toLowerCase());
-                    } else {
-                        Rect rectTest = new Rect();                     //  to get the coordinate of the UI element
-                        nodeInfo.getBoundsInScreen(rectTest);           //  store data of the node
-                         if(rectTest.right < width && rectTest.bottom<height){
-                            Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
+                        //Log.d(debugLogTag,"Available commands: " +foundLabel.toLowerCase());
+                        uiElements.add(foundLabel.toLowerCase());
+                        noOfLabels+=1;
+                    } else if (currentTooltipCount < 10){
+                            //Log.d(debugLogTag, currentTooltipCount+ ": Left " + rectTest.left + " Top " + rectTest.top+ " Right " + rectTest.right + " Bottom " + rectTest.bottom);
                             inflateTooltip((rectTest.right+rectTest.left)/2, rectTest.top, nodeInfo);    // call function to create number tooltips
-
                         }
                     }
                 }
@@ -205,13 +275,15 @@ public class VoiceToActionService extends AccessibilityService {
     public String searchForTextView(AccessibilityNodeInfo currentNode, String allTexts){
         String concatenatedString = allTexts;
         if(currentNode == null || concatenatedString.split(" ").length > 5) return concatenatedString;
-        if(currentNode.getClassName().equals("android.widget.TextView") && currentNode.getText() != null){
+
+        if( currentNode.getClassName() != null && currentNode.getClassName().equals("android.widget.TextView") && currentNode.getText() != null){
             concatenatedString += currentNode.getText().toString() + " ";
         } else {
             for (int i = 0; i < currentNode.getChildCount(); ++i) {
                 concatenatedString += searchForTextView(currentNode.getChild(i),concatenatedString);    // recursive call
             }
         }
+
         return concatenatedString;
     }
 
@@ -223,6 +295,7 @@ public class VoiceToActionService extends AccessibilityService {
          * @param: depth : the current level of leaf
          * @param: text: the passed in text for writing in the edit text field.
          */
+        Log.d(debugLogTag, "filling " + text);
         if (nodeInfo == null) return;   // null check
         if(nodeInfo.isEditable()){      // check if the node has editable field
             setGivenText(nodeInfo,text);       // call a method to put in the text
@@ -231,20 +304,6 @@ public class VoiceToActionService extends AccessibilityService {
             setTextForAllSubNode(nodeInfo.getChild(i), depth + 1, text);
         }
     }
-
-    public void setGivenText(AccessibilityNodeInfo currentNode, String text){
-        /**
-         * This function will set the text for a given node
-         * @param: currentNode: the node to store information about object that will be inserted the text.
-         * @param: text: the customized passed in text to be written in the field.
-         */
-        Bundle arguments = new Bundle();
-        arguments.putCharSequence(AccessibilityNodeInfo
-                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,text);
-        currentNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
-    }
-
-
 
     public void scrollingActivity(String command){
         /**
@@ -268,7 +327,7 @@ public class VoiceToActionService extends AccessibilityService {
 
                 GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
                 Path path = new Path();
-
+                command = command.toLowerCase().trim();
 
                 // Scroll up
                 if (command.contains("up")) {
@@ -290,7 +349,7 @@ public class VoiceToActionService extends AccessibilityService {
                 dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
                     @Override
                     public void onCompleted(GestureDescription gestureDescription) { // gesture execution
-                        Log.d(debugLogTag,"Gesture Completed");
+                        //Log.d(debugLogTag,"Gesture Completed");
                         super.onCompleted(gestureDescription);
                     }
                 }, null);
@@ -324,12 +383,11 @@ public class VoiceToActionService extends AccessibilityService {
         createSwitch();
         checkAudioPermission();
         initializeSpeechRecognition();                      // Checking permissions & initialising speech recognition
-        configureListenButton();
-        configureRecordButton();
-        configurePlayButton();
         loadPresavedCommands();
         getDisplayMetrics();
-        Log.d("Service Test","Service Connected");
+        Log.d(debugLogTag,"Service Connected");
+        loadAppNames();
+        autoReloadHandler.post(runnable);
     }
 
     private void getDisplayMetrics() {
@@ -344,6 +402,7 @@ public class VoiceToActionService extends AccessibilityService {
         if (fetchedCommandSet != null) {
             predefinedCommands.addAll(fetchedCommandSet);
         }
+
     }
 
     private void createSwitch(){
@@ -352,20 +411,59 @@ public class VoiceToActionService extends AccessibilityService {
          * connected and will be gone when service is shutdown
          *
          */
+
+        // Check for permissions
+        int LAYOUT_FLAG;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        } else {
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
+        }
         mLayout = new FrameLayout(this);
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.gravity = Gravity.TOP ;  // stick it to the top
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+
+        // Create layout for switchBar
+        switchBar = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                LAYOUT_FLAG,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        switchBar.gravity = Gravity.TOP;  // stick it to the top
+        //WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+
 
         LayoutInflater inflater = LayoutInflater.from(this);
-        inflater.inflate(R.layout.action_bar, mLayout);
-        wm.addView(mLayout, lp);       // add it to the screen
-    }
+        View actionBar = inflater.inflate(R.layout.action_bar, mLayout);
+        wm.addView(mLayout, switchBar);       // add it to the screen
 
+        //trying to get this work for all 3 buttons
+        View[] buttonArray = {(View)actionBar.findViewById(R.id.listenBtn), (View)actionBar.findViewById(R.id.recordBtn)};
+
+        //set an ontouchlistener for each button
+        for (int i=0; i < buttonArray.length; i++){
+            buttonArray[i].setOnTouchListener(this);
+
+        }
+
+
+        Button recordBtn = mLayout.findViewById(R.id.recordBtn);
+        Button listenBtn = mLayout.findViewById(R.id.listenBtn);
+
+        Drawable unwrappedDrawable = AppCompatResources.getDrawable(getApplicationContext(), R.drawable.roundedbutton);
+        Drawable wrappedDrawable = DrawableCompat.wrap(unwrappedDrawable);
+        DrawableCompat.setTint(wrappedDrawable, Color.argb(buttonOpacitySpinnerItems[buttonOpacity],255,255,255));
+
+        recordBtn.setBackgroundResource(R.drawable.roundedbutton);
+        listenBtn.setBackgroundResource(R.drawable.roundedbutton);
+
+        configureListenButton(listenBtn);
+        configureRecordButton(recordBtn);
+
+        if(!buttonRecordItems[buttonRecordTxt]){
+            recordBtn.setVisibility(View.GONE);
+        }
+
+    }
 
     private void inflateTooltip(int x, int y, AccessibilityNodeInfo nodeInfo){
         /**
@@ -374,28 +472,57 @@ public class VoiceToActionService extends AccessibilityService {
          * param: x is the location in x axis
          * param: y is the location in y axis
          */
-          // window manager
         FrameLayout tooltipLayout = new FrameLayout(this);      // create new layout for each tooltip
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        lp.format = PixelFormat.TRANSLUCENT;
-        lp.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        lp.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
-        lp.x = x;       // x location
-        lp.y = y - 100;       // y location
+        WindowManager.LayoutParams tooltipLayoutParams = new WindowManager.LayoutParams();
+        tooltipLayoutParams.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        tooltipLayoutParams.format = PixelFormat.TRANSLUCENT;
+        tooltipLayoutParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        tooltipLayoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        tooltipLayoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        tooltipLayoutParams.gravity = Gravity.TOP|Gravity.START;     // reset the (0,0) to the top left screen
+        tooltipLayoutParams.x = x;       // x location
+        tooltipLayoutParams.y = y - 100;       // y location
         LayoutInflater inflater = LayoutInflater.from(this);
         inflater.inflate(R.layout.tooltip_number, tooltipLayout);   // inflate the view to the screen
-        wm.addView(tooltipLayout, lp);
+        wm.addView(tooltipLayout, tooltipLayoutParams);
 
         TextView tooltip = tooltipLayout.findViewById(R.id.tooltip);    // set the count based on current count
         tooltip.setText(currentTooltipCount + "");
-                 // add to the list to retrieve later
+        tooltip.setTextSize(tooltipSizeSpinnerItems[tooltipSize]);
+        tooltip.setBackgroundResource(R.drawable.tooltip_shape);  //drawable id
+        GradientDrawable gd = (GradientDrawable) tooltip.getBackground().getCurrent();
+        gd.setColor(Color.parseColor(tooltipColorSpinnerItems[tooltipColor])); //set color
+        gd.setAlpha(tooltipOpacitySpinnerItems[tooltipOpacity]);        // add to the list to retrieve later
+        gd.setSize(tooltipSizeSpinnerItems[tooltipSize] + 40,tooltipSizeSpinnerItems[tooltipSize]+ 5);
+        tooltipRequiredNodes.add(new TooltipRequiredNode(nodeInfo,currentTooltipCount,tooltipLayout));
+        uiElements.add(Integer.toString(currentTooltipCount));
+        currentTooltipCount += 1;
 
-         tooltipRequiredNodes.add(new TooltipRequiredNode(nodeInfo,currentTooltipCount,tooltipLayout));
-         currentTooltipCount += 1;
+    }
 
+    // This method is responsible for updating the switchBar coordniates upon touch and updating the view
+    @Override
+    public boolean onTouch(View view1, MotionEvent motionEvent){
+
+        switch(motionEvent.getAction()){
+
+            case MotionEvent.ACTION_DOWN:
+                initialX = switchBar.x;
+                initialY = switchBar.y;
+                initialTouchX = motionEvent.getRawX();
+                initialTouchY = motionEvent.getRawY();
+                break;
+
+            case MotionEvent.ACTION_UP:
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                switchBar.x = initialX + (int) (motionEvent.getRawX() - initialTouchX);
+                switchBar.y = initialY + (int) (motionEvent.getRawY() - initialTouchY);
+                wm.updateViewLayout(mLayout, switchBar);
+                break;
+        }
+        return false;
     }
 
     private void removeAllTooltips(){
@@ -408,12 +535,12 @@ public class VoiceToActionService extends AccessibilityService {
                 wm.removeView(tooltip.tooltipLayout);   // remove them from the screen
         }
         // reset all variables when changing to new screen.
-        currentTooltipCount = 0;
+        currentTooltipCount = 1;
         tooltipRequiredNodes.clear();
         foundLabeledNodes.clear();
     }
 
-    private void configureListenButton() {
+    private void configureListenButton(Button listenBtn) {
         /**
          * This function is called after the service has been connected. This function binds
          * functionality to the master button which can be used to turn on/off the tool.
@@ -423,7 +550,7 @@ public class VoiceToActionService extends AccessibilityService {
          * @post-cond: functionality has been added to the inflated button
          * */
 
-        Button listenBtn = (Button) mLayout.findViewById(R.id.listenBtn);
+
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -439,9 +566,8 @@ public class VoiceToActionService extends AccessibilityService {
             }
         });
     }
-    private void configureRecordButton() {
+    private void configureRecordButton(Button listenBtn) {
 
-        Button listenBtn = (Button) mLayout.findViewById(R.id.recordBtn);
         listenBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -466,25 +592,12 @@ public class VoiceToActionService extends AccessibilityService {
                         editor.apply();
                     }
 
-                    Log.d(debugLogTag," " + savedCommands.size());
-                    Log.d(debugLogTag," " + savedCommands);
+                    //Log.d(debugLogTag," " + savedCommands.size());
+                    //Log.d(debugLogTag," " + savedCommands);
                 }
             }
         });
     }
-    private void configurePlayButton() {
-
-        Button listenBtn = (Button) mLayout.findViewById(R.id.playBtn);
-        listenBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-              commandExecution("new command");
-
-            }
-        });
-    }
-
     private void openApp(String inputName) {
         /**
          * This function is used to check if the given string matches with any applications that the
@@ -504,7 +617,7 @@ public class VoiceToActionService extends AccessibilityService {
             try {
                 ApplicationInfo info = pm.getApplicationInfo(packageInfo.packageName, PackageManager.GET_META_DATA);
                 String appName = (String) pm.getApplicationLabel(info).toString().toLowerCase();
-                if(appName.contains(inputName) || inputName.contains(appName)){
+                if(appName.equals(inputName)){
                     Intent mIntent = getPackageManager().getLaunchIntentForPackage(
                             packageInfo.packageName);
                     if (mIntent != null) {
@@ -512,11 +625,11 @@ public class VoiceToActionService extends AccessibilityService {
                             startActivity(mIntent);
                             // Adding some text-to-speech feedback for opening apps based on input
                             // Text-to-speech feedback if app not found);
-                            speakerTask(speechPrompt.get("open") + inputName);
+//                            speakerTask(speechPrompt.get("open") + inputName);
 
                         } catch (ActivityNotFoundException err) {
                             // Text-to-speech feedback if app not found
-                            speakerTask(speechPrompt.get("noMatch") + inputName);
+//                            speakerTask(speechPrompt.get("noMatch") + inputName);
 
                             // Render toast message on screen
                             Toast t = Toast.makeText(getApplicationContext(),
@@ -527,7 +640,22 @@ public class VoiceToActionService extends AccessibilityService {
                 }
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();                // handling app not found exception
-                speakerTask(speechPrompt.get("noMatch") + inputName);
+//                speakerTask(speechPrompt.get("noMatch") + inputName);
+            }
+        }
+    }
+
+    private void loadAppNames() {
+        final PackageManager pm = getPackageManager();
+        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA); // getting meta data of all installed apps
+
+        for (ApplicationInfo packageInfo : packages) {          // checking if the input has a match with app name
+            try {
+                ApplicationInfo info = pm.getApplicationInfo(packageInfo.packageName, PackageManager.GET_META_DATA);
+                String appName = (String) pm.getApplicationLabel(info).toString().toLowerCase();
+                this.appNames.add(appName);
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();                // handling app not found exception
             }
         }
     }
@@ -546,47 +674,12 @@ public class VoiceToActionService extends AccessibilityService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(!(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) {
                 Intent permissionIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:"+ getPackageName()));
-                startActivity(permissionIntent);
+                //startActivity(permissionIntent);
                 Toast.makeText(this,"Please enable microphone access and relaunch.",Toast.LENGTH_LONG).show();
             }
 
         }
     }
-
-    private boolean isLaunchTrigger(String word) {
-        /**
-         * This function checks the permissions and starts the settings activity for the given app
-         * for the user to enable the required permissions for the app to run as intended. (These
-         * permissions were required after android marshmallow.
-         *
-         * @param: word - This is a String which is supposed to be checked against the trigger words.
-         * @return: It returns a boolean evaluating the above mentioned check.
-         * @post-cond: None
-         */
-        
-        for (String launchTrigger : launchTriggers) {
-            if (word.equals(launchTrigger))
-                return true;
-        }
-        return false;
-    }
-    private boolean isPressTrigger(String word) {
-        /**
-         * This function checks the permissions and starts the settings activity for the given app
-         * for the user to enable the required permissions for the app to run as intended. (These
-         * permissions were required after android marshmallow.
-         *
-         * @param: word - This is a String which is supposed to be checked against the trigger words.
-         * @return: It returns a boolean evaluating the above mentioned check.
-         * @post-cond: None
-         */
-        for (String pressTrigger:pressTriggers){
-            if(word.equals(pressTrigger))
-                return true;
-        }
-        return false;
-    }
-
 
     public void speakerTask(String toSpeak) {
         /**
@@ -599,13 +692,6 @@ public class VoiceToActionService extends AccessibilityService {
         startService(i);
     }
 
-    public void findNearbyMapDeepLink(String location){
-        Uri gmmIntentUri = Uri.parse("geo:0,0?q="+location);
-        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
-        mapIntent.setPackage("com.google.android.apps.maps");
-        startActivity(mapIntent);
-    }
-
     boolean clickButtonByText(String word) {
         /**
          * This function will click a button (anything thats clickable) with provided information
@@ -614,10 +700,11 @@ public class VoiceToActionService extends AccessibilityService {
         // Processes input first to determine if number label was called
         // More efficient number label processing? Skips iterating through array of numbers and assumes the array is numerical order if input is a Digit
         if (TextUtils.isDigitsOnly(word)) {
-            if (Integer.parseInt(word) < currentTooltipCount){
-                if (tooltipRequiredNodes.size() > Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            //Log.d(debugLogTag,word);
+            if (Integer.parseInt(word) <= currentTooltipCount){
+                if (tooltipRequiredNodes.size() >= Integer.parseInt(word) && tooltipRequiredNodes.get(Integer.parseInt(word)-1).nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                     // perform click with condition to return once click is successful
-                    Log.d(debugLogTag, "Clicked number: " + word);    // log the information
+                    //Log.d(debugLogTag, "Clicked number: " + word);    // log the information
                     return true;
                 }
 
@@ -627,18 +714,20 @@ public class VoiceToActionService extends AccessibilityService {
         for(LabelFoundNode foundLabeledNode: foundLabeledNodes){
             if(foundLabeledNode.label.contains(word)){
                 if (foundLabeledNode.nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                    Log.d(debugLogTag, "Clicked on description:" + word);
+                    //Log.d(debugLogTag, "Clicked on description:" + word);
                     return true;
                 }
   // return once clicked
             }
         }
 
+        if (currentSource == null) {return false;}
+
         //Find ALL of the nodes that match the "text" argument.
         List<AccessibilityNodeInfo> list = currentSource.findAccessibilityNodeInfosByText(word);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on item:" + word);
+                //Log.d(debugLogTag, "Clicked on item:" + word);
             }
             return true;     // return once clicked
         }
@@ -647,7 +736,7 @@ public class VoiceToActionService extends AccessibilityService {
         list = currentSource.findAccessibilityNodeInfosByText(camelCaseWord);    // find the node by text
         for (final AccessibilityNodeInfo node : list) { // go through each node to see if action can be performed
             if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)){
-                Log.d(debugLogTag, "Clicked on item:" + word);
+                //Log.d(debugLogTag, "Clicked on item:" + word);
             }
 
             return true;     // return once clicked
@@ -664,21 +753,9 @@ public class VoiceToActionService extends AccessibilityService {
         String[] words = match.split(" ");
         ArrayList<String> trimmedWords = new ArrayList<String>();
         // ["open","uber"...]
+        //Log.d(debugLogTag,match);
 
-        if(predefinedCommands.contains(match.toLowerCase())){
-            String commands  = sharedPreferences.getString(match,null);
-            currentSequence.clear();
-            Collections.addAll(currentSequence, commands.split(";"));
-            if(currentSequence.size() == 0){
-                Log.d(debugLogTag,"no more item to press");
-            }
-            else if(commandExecution(currentSequence.get(0))){
-                currentSequence.remove(0);
-                Log.d(debugLogTag,"clicked based on saved actions, items left: " + currentSequence.size());
-                isPlaying = true;
-            }
-            return true;
-        }
+
         for (int index=0; index< words.length; index++) {
             String word = words[index].toLowerCase().trim();
             trimmedWords.add(word);
@@ -693,8 +770,7 @@ public class VoiceToActionService extends AccessibilityService {
             isActionInvoked = true;
         } else if(launchTriggers.contains(initialWord)){
             isActionInvoked = true;
-            for(int i = 1;i < trimmedWords.size(); i++)
-                openApp(trimmedWords.get(i));
+            openApp(match);
         } else if (initialWord.equals("enter")) {
             String textToSet = match.substring(6);
             setTextForAllSubNode(currentSource,0,textToSet);
@@ -704,7 +780,6 @@ public class VoiceToActionService extends AccessibilityService {
             scrollingActivity(trimmedWords.get(1));
             isActionInvoked = true;
         } else if(!trimmedWords.get(0).equals("")){
-            Log.d(debugLogTag,"clicking invoked for:" + trimmedWords.get(0));
             if (clickButtonByText(trimmedWords.get(0))) {
                 isActionInvoked = true;
             }
@@ -726,6 +801,112 @@ public class VoiceToActionService extends AccessibilityService {
         return false;
     }
 
+    private void executeCommand(String sentence){
+        String currentCommand = "";
+        if(!hasExecuted) {
+            return;
+        }
+
+        if(predefinedCommands.contains(sentence.toLowerCase().trim())){
+
+            String commands  = sharedPreferences.getString(sentence.toLowerCase().trim(),null);
+            sentence = commands.replaceAll(";"," and ");
+            Log.d(debugLogTag, "Loaded predefined commands: "+ sentence);
+        }
+
+        Log.d(debugLogTag, "Current EXEC SEQ: " + currentSequence.toString());
+
+        if(sentence.equals("") && currentSequence.size() == 0) {
+            skipPreviousRTECheck = true;
+            return;
+        }
+
+        if(!sentence.equals("")){
+            skipPreviousRTECheck = true;
+            Collections.addAll(currentSequence, sentence.split("and"));
+            Log.d(debugLogTag, "New EXEC SEQ: " + currentSequence.toString());
+        }
+
+        if(!skipPreviousRTECheck){
+            if(uiElements.equals(previousUIElements)) {
+                Log.d(debugLogTag, "No change in RTE: " + uiElements.toString() + ", " + previousUIElements.toString());
+                return;
+            }
+        }
+
+        if(currentSequence.size() != 0) {
+            ActionTargetMatcher currentCommandMatcher;
+            currentCommand = currentSequence.remove(0);
+            if (currentCommand.contains("back")){
+                performGlobalAction(GLOBAL_ACTION_BACK);
+
+            } else if (currentCommand.contains("home")) {
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            } else if (currentCommand.replace(" ","").contains("shutdownservice")){
+                Button listenBtn = mLayout.findViewById(R.id.listenBtn);
+                listenBtn.setText("Start");
+                isOn = false;
+                speechRecognizer.stopListening();           // on click listener to stop listening & processing data
+            } else {
+                currentCommandMatcher = new ActionTargetMatcher(currentCommand, uiElements, appNames);
+                previousUIElements.clear();
+                previousUIElements.addAll(uiElements);
+                skipPreviousRTECheck = false;
+//                Log.d(debugLogTag, "Executing: " + currentCommand + " RTEnv: " + uiElements.toString());
+                ArrayList<HashMap<ActionTargetMatcher.Action, ArrayList<String>>> actionTargetPairs = currentCommandMatcher.getCommandActionTargets();
+                Log.d(debugLogTag, "AT Pairs: " + actionTargetPairs.toString());
+
+                if (actionTargetPairs.size() == 0 && !sentence.contains("match not found") && !sentence.contains("did you mean")) {
+                    skipPreviousRTECheck = true;
+                    this.speakerTask("Target match not found. ");
+                    //this.executeCommand("");
+                    currentSequence.clear();
+                }
+                for (HashMap<ActionTargetMatcher.Action, ArrayList<String>> actionTargetPair : actionTargetPairs) {
+                    //Log.d(debugLogTag, actionTargetPair.toString());
+                    List<ActionTargetMatcher.Action> actionList = new ArrayList<ActionTargetMatcher.Action>(actionTargetPair.keySet());
+                    ActionTargetMatcher.Action currentAction = actionList.get(0);
+
+                    if(actionTargetPair.get(currentAction).size() > 1){
+                        this.speakerTask("Exact match not found. Did you mean "+ actionTargetPair.get(currentAction).get(0) + " or " +actionTargetPair.get(currentAction).get(1) + "?");
+                        skipPreviousRTECheck = true;
+                        //this.executeCommand("");
+                        currentSequence.clear();
+                        return;
+                    }
+
+                    hasExecuted = false;
+                    boolean isExecuted = false;
+                    if (currentAction == ActionTargetMatcher.Action.CLICK) {
+                        clickButtonByText(actionTargetPair.get(currentAction).get(0));
+                        isExecuted = true;
+                    } else if (currentAction == ActionTargetMatcher.Action.SCROLL) {
+                        scrollingActivity(actionTargetPair.get(currentAction).get(0));
+                        skipPreviousRTECheck = true;
+                        isExecuted = true;
+                    } else if (currentAction == ActionTargetMatcher.Action.OPEN) {
+                        openApp(actionTargetPair.get(currentAction).get(0));
+                        isExecuted = true;
+                    } else if (currentAction == ActionTargetMatcher.Action.ENTER) {
+                        setTextForAllSubNode(currentSource, 0, actionTargetPair.get(currentAction).get(0));
+                        skipPreviousRTECheck = true;
+                        isExecuted = true;
+                    }
+                    if(isRecording && isExecuted){
+                        Log.d(debugLogTag,"Duc" + currentCommand);
+                        savedCommands.add(currentCommand);
+                    }
+                }
+            }
+            hasExecuted = true;
+            try{
+                java.util.concurrent.TimeUnit.SECONDS.sleep(3); // emulates thread synchronisation
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void initializeSpeechRecognition() {
         /**
          * This function performs all the steps required for speech recognition initialisation
@@ -736,6 +917,8 @@ public class VoiceToActionService extends AccessibilityService {
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         // also available: LANGUAGE_MODEL_WEB_SEARCH
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        // setting the limit for the service to listen as an requirement for API30
+        speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100000);
 
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
 
@@ -770,11 +953,11 @@ public class VoiceToActionService extends AccessibilityService {
                 //Toast.makeText(MainActivity.this, "An error has occurred. Code: " + Integer.toString(error), Toast.LENGTH_SHORT).show();
                 if(error == 8 || error == 7) {
                     speechRecognizer.cancel();
-                    speechRecognizer.startListening(speechRecognizerIntent);
+                    if(isOn) {
+                        speechRecognizer.startListening(speechRecognizerIntent);
+                    }
                 }
             }
-
-
 
             @Override
             public void onResults(Bundle results) {
@@ -786,12 +969,18 @@ public class VoiceToActionService extends AccessibilityService {
 
                 if (matches!=null) {
                     for (String match : matches) {
-                        commandExecution(match);
+                        Log.d(debugLogTag,match);
+                        if(buttonAlgoItems[buttonAlgoTxt]){
+                            Log.d(debugLogTag,"Using custom Algo");
+                            executeCommand(match);
+                        } else {
+                            Log.d(debugLogTag,"Using  AutoML");
+                            autoMLRequest(match);
+                        }
                     }
                 }
                 speechRecognizer.startListening(speechRecognizerIntent);
             }
-
             @Override
             public void onPartialResults(Bundle partialResults) {
                 // Called when partial recognition results are available.
@@ -803,4 +992,94 @@ public class VoiceToActionService extends AccessibilityService {
             }
         });
     }
+
+    // Enter action
+    public void setGivenText(AccessibilityNodeInfo currentNode, String text){
+        /**
+         * This function will set the text for a given node
+         * @param: currentNode: the node to store information about object that will be inserted the text.
+         * @param: text: the customized passed in text to be written in the field.
+         */
+        Bundle arguments = new Bundle();
+        arguments.putCharSequence(AccessibilityNodeInfo
+                .ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,text);
+        currentNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+    }
+
+
+    private void autoMLRequest(String command){
+        String token = "ya29.c.Kp8BFAjn21ijznPpm2s_MSYIWVxtw-RG8GtPGivsG18brZD9YeLCPgYAuKgncT5I--OH64tpT7Bky1SmcxP9q8v-wK3kiAgdymR9X7spw6LO1Lftw_xjdjCqF0YAhWEl8JJpoI2LNnlMtMbg2somJJrMgNQkHWZgAicThtGzYDfLhlOnKLostXTm3OO8L4ABLjk995FTPrUBptMdjn5NGk01";
+        Interceptor headerInterceptor  = new Interceptor() {
+            @Override
+            public okhttp3.Response intercept(Chain chain) throws IOException {
+                return chain.proceed(chain.request().newBuilder()
+                        .addHeader("Authorization","Bearer " + token).build());
+
+            }
+        };
+
+        RequestBody.Payload.TextSnippet textSnippet = new RequestBody.Payload.TextSnippet(command);
+        RequestBody.Payload payload = new RequestBody.Payload(textSnippet);
+        RequestBody requestBody = new RequestBody(payload);
+
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        //clientBuilder.addInterceptor(loggingInterceptor);
+        clientBuilder.addInterceptor(headerInterceptor);
+        Retrofit retrofit = new Retrofit.Builder()  // retrofit boilerplate
+                .baseUrl("https://automl.googleapis.com/v1/")
+                .client(clientBuilder.build())
+                .addConverterFactory(GsonConverterFactory.create()) // add converter
+                .build();
+
+
+        GoogleAutoML service = retrofit.create(GoogleAutoML.class);
+        Call<RespondBody> serviceSynonyms = service.getEntities(requestBody);  // pass in input string to find synonyms.
+        serviceSynonyms.enqueue(new Callback<RespondBody>(){  // asynchronous call
+
+            @Override
+            public void onResponse(Call<RespondBody> call, Response<RespondBody> response) {
+                String output = "";
+                RespondBody respondBody = response.body();
+                RespondBody.Payload[] payloads = respondBody.getPayload();
+                boolean isAction = false;
+                String action = "";
+                for(RespondBody.Payload payload1: payloads){
+                    if(!isAction){
+                        if (payload1.getDisplayName().equals("Action")){
+                            action = payload1.textExtraction.textSegment.getContent();
+
+                            isAction = true;
+                        }
+                    } else if (!action.equals("")){
+                        output += " and " + action + " " +payload1.textExtraction.textSegment.getContent();
+                        action = "";
+                        isAction = false;
+                        }
+                }
+                if(output.length() > 0) {
+                    Log.d(debugLogTag,output.substring(4));
+                    executeCommand(output.substring(4));
+                } else {
+                    executeCommand(command);
+                }
+
+            }
+            @Override
+            public void onFailure(Call<RespondBody> call, Throwable t) {
+                Log.d(debugLogTag, t.getMessage() + " Error");
+
+            }
+        });
+    }
 }
+
+
+/*
+* 1) Button for switching between AutoML & Custom Action-Target Matching algorithm
+* 2) Function in VoiceToActionService to execute action on a target.
+*       param - ArrayList<HashMap<Action,String>>
+                eg: [{OPEN: "chrome"}]
+  3)
+* */
